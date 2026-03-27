@@ -8,6 +8,7 @@ import { summarizeAllGroups } from '../utils/calculations';
 import { buildReminderMessage, openWhatsApp } from '../utils/whatsapp';
 import { formatCurrency } from '../utils/formatters';
 import { copyText } from '../utils/native';
+import { confirmAction } from '../utils/confirm';
 import GlassCard from '../components/GlassCard';
 import DebtorCard from '../components/DebtorCard';
 
@@ -91,21 +92,18 @@ export default function VasuliDashboardScreen() {
     }
   };
 
-  const markPaid = (item) => {
+  const markPaid = async (item) => {
     if (item.status === 'paid') return;
-    Alert.alert('Mark paid', `Mark ${item.name} as paid?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          await updateSettlementStatus(item.groupId, item.debtorId, item.creditorId, {
-            status: 'paid',
-            paidAt: new Date().toISOString(),
-          });
-          showToast(`${item.name} settled`);
-        },
-      },
-    ]);
+    const confirmed = await confirmAction({
+      title: 'Mark paid',
+      message: `Mark ${item.name} as paid?`,
+    });
+    if (!confirmed) return;
+    await updateSettlementStatus(item.groupId, item.debtorId, item.creditorId, {
+      status: 'paid',
+      paidAt: new Date().toISOString(),
+    });
+    showToast(`${item.name} settled`);
   };
 
   const copyMessage = async (item) => {

@@ -23,6 +23,7 @@ import { buildReminderMessage, openWhatsApp } from '../utils/whatsapp';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { createLocalId } from '../utils/storage';
 import { copyText, runHapticImpact, runHapticSuccess } from '../utils/native';
+import { confirmAction } from '../utils/confirm';
 import GlassCard from '../components/GlassCard';
 import ExpenseCard from '../components/ExpenseCard';
 import MemberCard from '../components/MemberCard';
@@ -98,18 +99,16 @@ export default function GroupDetailScreen({ route, navigation }) {
     });
   };
 
-  const handleDeleteExpense = (expenseId) => {
-    Alert.alert('Delete expense', 'Remove this expense from the group?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteExpense(group.id, expenseId);
-          showToast('Expense deleted');
-        },
-      },
-    ]);
+  const handleDeleteExpense = async (expenseId) => {
+    const confirmed = await confirmAction({
+      title: 'Delete expense',
+      message: 'Remove this expense from the group?',
+      confirmText: 'Delete',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await deleteExpense(group.id, expenseId);
+    showToast('Expense deleted');
   };
 
   const sendReminder = async (item) => {
@@ -134,22 +133,19 @@ export default function GroupDetailScreen({ route, navigation }) {
     }
   };
 
-  const markPaid = (item) => {
+  const markPaid = async (item) => {
     if (item.status === 'paid') return;
-    Alert.alert('Mark paid', `Mark ${item.name} as settled?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          await updateSettlementStatus(group.id, item.debtorId, item.creditorId, {
-            status: 'paid',
-            paidAt: new Date().toISOString(),
-          });
-          await runHapticSuccess();
-          showToast(`${item.name} marked paid`);
-        },
-      },
-    ]);
+    const confirmed = await confirmAction({
+      title: 'Mark paid',
+      message: `Mark ${item.name} as settled?`,
+    });
+    if (!confirmed) return;
+    await updateSettlementStatus(group.id, item.debtorId, item.creditorId, {
+      status: 'paid',
+      paidAt: new Date().toISOString(),
+    });
+    await runHapticSuccess();
+    showToast(`${item.name} marked paid`);
   };
 
   const copyMessage = async (item) => {
@@ -179,19 +175,17 @@ export default function GroupDetailScreen({ route, navigation }) {
 
   const category = categoryMap[group.category] || categoryMap.Other;
 
-  const handleDeleteGroup = () => {
-    Alert.alert('Delete group', `Delete ${group.name}? This cannot be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteGroup(group.id);
-          navigation.goBack();
-          showToast('Group deleted');
-        },
-      },
-    ]);
+  const handleDeleteGroup = async () => {
+    const confirmed = await confirmAction({
+      title: 'Delete group',
+      message: `Delete ${group.name}? This cannot be undone.`,
+      confirmText: 'Delete',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await deleteGroup(group.id);
+    navigation.goBack();
+    showToast('Group deleted');
   };
 
   return (

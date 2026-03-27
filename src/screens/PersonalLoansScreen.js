@@ -20,6 +20,7 @@ import { formatCurrency, formatDate, formatPhoneDisplay, normalizePhoneInput } f
 import { createLocalId } from '../utils/storage';
 import { buildReminderMessage, openWhatsApp } from '../utils/whatsapp';
 import { copyText } from '../utils/native';
+import { confirmAction } from '../utils/confirm';
 import GlassCard from '../components/GlassCard';
 
 const loanStatusMap = {
@@ -81,31 +82,26 @@ export default function PersonalLoansScreen() {
     showToast('Personal due added');
   };
 
-  const handleMarkPaid = (loan) => {
-    Alert.alert('Mark paid', `Mark ${loan.name} as settled?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          await updatePersonalLoan(loan.id, { status: 'paid', paidAt: new Date().toISOString() });
-          showToast(`${loan.name} marked paid`);
-        },
-      },
-    ]);
+  const handleMarkPaid = async (loan) => {
+    const confirmed = await confirmAction({
+      title: 'Mark paid',
+      message: `Mark ${loan.name} as settled?`,
+    });
+    if (!confirmed) return;
+    await updatePersonalLoan(loan.id, { status: 'paid', paidAt: new Date().toISOString() });
+    showToast(`${loan.name} marked paid`);
   };
 
-  const handleDelete = (loan) => {
-    Alert.alert('Delete entry', `Delete the due for ${loan.name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deletePersonalLoan(loan.id);
-          showToast('Personal due deleted');
-        },
-      },
-    ]);
+  const handleDelete = async (loan) => {
+    const confirmed = await confirmAction({
+      title: 'Delete entry',
+      message: `Delete the due for ${loan.name}?`,
+      confirmText: 'Delete',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await deletePersonalLoan(loan.id);
+    showToast('Personal due deleted');
   };
 
   const handleCopy = async (loan) => {
