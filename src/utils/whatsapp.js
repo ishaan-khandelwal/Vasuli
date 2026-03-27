@@ -18,6 +18,9 @@ export const buildReminderMessage = ({
 
 export const openWhatsApp = async ({ phone, message, countryCode }) => {
   const sanitized = sanitizePhone(phone, countryCode);
+  if (!sanitized) {
+    throw new Error('Phone number missing');
+  }
   const url = `https://wa.me/${sanitized}?text=${encodeURIComponent(message)}`;
   await Linking.openURL(url);
 };

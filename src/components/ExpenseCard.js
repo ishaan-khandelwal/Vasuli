@@ -12,7 +12,7 @@ export default function ExpenseCard({ expense, paidBy, splitMembers }) {
         <View>
           <Text style={styles.title}>{expense.title}</Text>
           <Text style={styles.sub}>
-            {paidBy?.name} paid • {formatDate(expense.date)}
+            {paidBy?.name} paid - {formatDate(expense.date)}
           </Text>
         </View>
         <Text style={styles.amount}>{formatCurrency(expense.amount)}</Text>

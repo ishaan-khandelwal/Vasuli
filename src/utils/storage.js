@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import defaultMessage from '../constants/defaultMessage';
 import { mergeSettlementsWithSuggestions } from './calculations';
+import { normalizePhoneInput } from './formatters';
 
 const GROUPS_KEY = 'vasuli_groups';
 const PROFILE_KEY = 'vasuli_profile';
@@ -8,18 +9,24 @@ const PERSONAL_LOANS_KEY = 'vasuli_personal_loans';
 
 const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
+const normalizeMembers = (members = []) =>
+  members.map((member) => ({
+    ...member,
+    phone: normalizePhoneInput(member.phone),
+  }));
+
 const sampleGroup = () => {
   const members = [
-    { id: 'm1', name: 'You', phone: '919999999999', isOrganizer: true },
-    { id: 'm2', name: 'Rahul', phone: '919888888881', isOrganizer: false },
-    { id: 'm3', name: 'Priya', phone: '919888888882', isOrganizer: false },
-    { id: 'm4', name: 'Karan', phone: '919888888883', isOrganizer: false },
-    { id: 'm5', name: 'Neha', phone: '919888888884', isOrganizer: false },
+    { id: 'm1', name: 'You', phone: '9999999999', isOrganizer: true },
+    { id: 'm2', name: 'Rahul', phone: '9888888881', isOrganizer: false },
+    { id: 'm3', name: 'Priya', phone: '9888888882', isOrganizer: false },
+    { id: 'm4', name: 'Karan', phone: '9888888883', isOrganizer: false },
+    { id: 'm5', name: 'Neha', phone: '9888888884', isOrganizer: false },
   ];
 
   const group = {
     id: 'sample-goa',
-    name: 'Goa Trip 🏖️',
+    name: 'Goa Trip',
     category: 'Trip',
     date: new Date().toISOString(),
     description: 'Beach stay, scooter rides and sunset dinners.',
@@ -92,11 +99,19 @@ export const bootstrapStorage = async () => {
 
 export const getGroups = async () => {
   const raw = await AsyncStorage.getItem(GROUPS_KEY);
-  return raw ? JSON.parse(raw) : [];
+  const groups = raw ? JSON.parse(raw) : [];
+  return groups.map((group) => ({
+    ...group,
+    members: normalizeMembers(group.members),
+  }));
 };
 
 export const saveGroups = async (groups) => {
-  await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
+  const normalized = groups.map((group) => ({
+    ...group,
+    members: normalizeMembers(group.members),
+  }));
+  await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(normalized));
 };
 
 export const getProfile = async () => {
@@ -110,11 +125,19 @@ export const saveProfile = async (profile) => {
 
 export const getPersonalLoans = async () => {
   const raw = await AsyncStorage.getItem(PERSONAL_LOANS_KEY);
-  return raw ? JSON.parse(raw) : [];
+  const personalLoans = raw ? JSON.parse(raw) : [];
+  return personalLoans.map((loan) => ({
+    ...loan,
+    phone: normalizePhoneInput(loan.phone),
+  }));
 };
 
 export const savePersonalLoans = async (personalLoans) => {
-  await AsyncStorage.setItem(PERSONAL_LOANS_KEY, JSON.stringify(personalLoans));
+  const normalized = personalLoans.map((loan) => ({
+    ...loan,
+    phone: normalizePhoneInput(loan.phone),
+  }));
+  await AsyncStorage.setItem(PERSONAL_LOANS_KEY, JSON.stringify(normalized));
 };
 
 export const clearAllStorage = async () => {

@@ -130,11 +130,12 @@ export default function GroupDetailScreen({ route, navigation }) {
       });
       showToast(`WhatsApp opened for ${item.name}`);
     } catch (error) {
-      showToast('Could not open WhatsApp');
+      showToast(error?.message || 'Could not open WhatsApp');
     }
   };
 
   const markPaid = (item) => {
+    if (item.status === 'paid') return;
     Alert.alert('Mark paid', `Mark ${item.name} as settled?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -165,7 +166,11 @@ export default function GroupDetailScreen({ route, navigation }) {
   };
 
   const remindAll = async () => {
-    const pending = debtors.filter((item) => item.status !== 'paid');
+    const pending = debtors.filter((item) => item.status !== 'paid' && item.phone);
+    if (!pending.length) {
+      showToast('No pending members with phone numbers');
+      return;
+    }
     for (const item of pending) {
       await sendReminder(item);
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -397,6 +402,7 @@ const styles = StyleSheet.create({
     paddingBottom: 26,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
+    borderTopWidth: 0,
   },
   back: {
     width: 38,

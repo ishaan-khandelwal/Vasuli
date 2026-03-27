@@ -19,6 +19,20 @@ export const sanitizePhone = (phone = '', countryCode = '91') => {
   return `${countryCode}${cleaned.replace(/^0+/, '')}`;
 };
 
+export const normalizePhoneInput = (phone = '', countryCode = '91') => {
+  const cleaned = `${phone}`.replace(/[^\d]/g, '');
+  if (!cleaned) return '';
+  if (cleaned.startsWith(countryCode) && cleaned.length > 10) {
+    return cleaned.slice(countryCode.length);
+  }
+  return cleaned.replace(/^0+/, '');
+};
+
+export const formatPhoneDisplay = (phone = '', countryCode = '91') => {
+  const normalized = normalizePhoneInput(phone, countryCode);
+  return normalized || 'No phone';
+};
+
 export const getInitials = (name = '') =>
   name
     .trim()

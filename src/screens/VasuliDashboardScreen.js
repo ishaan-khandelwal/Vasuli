@@ -87,11 +87,12 @@ export default function VasuliDashboardScreen() {
       });
       showToast(`WhatsApp opened for ${item.name}`);
     } catch (error) {
-      showToast('Could not open WhatsApp');
+      showToast(error?.message || 'Could not open WhatsApp');
     }
   };
 
   const markPaid = (item) => {
+    if (item.status === 'paid') return;
     Alert.alert('Mark paid', `Mark ${item.name} as paid?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -191,6 +192,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
+    backgroundColor: colors.background,
     paddingTop: 68,
     paddingHorizontal: 20,
     paddingBottom: 120,

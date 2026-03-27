@@ -21,6 +21,7 @@ import { categories } from '../constants/categories';
 import CategoryChip from '../components/CategoryChip';
 import GlassCard from '../components/GlassCard';
 import { createLocalId } from '../utils/storage';
+import { normalizePhoneInput } from '../utils/formatters';
 import { runHapticSuccess } from '../utils/native';
 
 export default function CreateGroupScreen() {
@@ -36,8 +37,8 @@ export default function CreateGroupScreen() {
   const [date, setDate] = useState(new Date());
   const [description, setDescription] = useState('');
   const [members, setMembers] = useState([
-    { id: createLocalId(), name: 'You', phone: '91', isOrganizer: true },
-    { id: createLocalId(), name: '', phone: '91', isOrganizer: false },
+    { id: createLocalId(), name: 'You', phone: '', isOrganizer: true },
+    { id: createLocalId(), name: '', phone: '', isOrganizer: false },
   ]);
   const [showPicker, setShowPicker] = useState(false);
 
@@ -55,7 +56,7 @@ export default function CreateGroupScreen() {
 
   const addMember = () => {
     if (members.length >= 20) return;
-    const nextMember = { id: createLocalId(), name: '', phone: '91', isOrganizer: false };
+    const nextMember = { id: createLocalId(), name: '', phone: '', isOrganizer: false };
     setMembers((current) => [...current, nextMember]);
     requestAnimationFrame(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
@@ -78,7 +79,7 @@ export default function CreateGroupScreen() {
       .map((member) => ({
         ...member,
         name: member.name.trim(),
-        phone: member.phone.trim(),
+        phone: normalizePhoneInput(member.phone),
       }))
       .filter((member) => member.name && member.phone);
 
@@ -216,11 +217,12 @@ export default function CreateGroupScreen() {
                 ref={(ref) => {
                   memberPhoneRefs.current[member.id] = ref;
                 }}
-                placeholder="+91 9876543210"
+                placeholder="Phone number"
                 placeholderTextColor={colors.muted}
                 keyboardType="phone-pad"
                 value={member.phone}
-                onChangeText={(text) => updateMember(member.id, { phone: text })}
+                onChangeText={(text) => updateMember(member.id, { phone: normalizePhoneInput(text) })}
+                maxLength={10}
                 onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
                 onSubmitEditing={() => focusNextMemberField(index, 'phone')}
                 returnKeyType={index === members.length - 1 ? 'done' : 'next'}

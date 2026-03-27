@@ -16,11 +16,17 @@ import { Feather } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, formatPhoneDisplay, normalizePhoneInput } from '../utils/formatters';
 import { createLocalId } from '../utils/storage';
 import { buildReminderMessage, openWhatsApp } from '../utils/whatsapp';
 import { copyText } from '../utils/native';
 import GlassCard from '../components/GlassCard';
+
+const loanStatusMap = {
+  pending: { label: 'Pending', style: 'pending' },
+  reminded: { label: 'Reminded', style: 'reminded' },
+  paid: { label: 'Paid', style: 'paid' },
+};
 
 export default function PersonalLoansScreen() {
   const { personalLoans, profile, createPersonalLoan, updatePersonalLoan, deletePersonalLoan } = useApp();
@@ -28,7 +34,7 @@ export default function PersonalLoansScreen() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     name: '',
-    phone: '91',
+    phone: '',
     amount: '',
     note: '',
   });
@@ -46,7 +52,7 @@ export default function PersonalLoansScreen() {
   const resetForm = () => {
     setForm({
       name: '',
-      phone: '91',
+      phone: '',
       amount: '',
       note: '',
     });
@@ -61,7 +67,7 @@ export default function PersonalLoansScreen() {
     await createPersonalLoan({
       id: createLocalId(),
       name: form.name.trim(),
-      phone: form.phone.trim(),
+      phone: normalizePhoneInput(form.phone),
       amount: Number(form.amount),
       note: form.note.trim(),
       status: 'pending',
@@ -133,11 +139,12 @@ export default function PersonalLoansScreen() {
         countryCode: profile.defaultCountryCode,
       });
       await updatePersonalLoan(loan.id, {
+        status: 'reminded',
         remindedAt: new Date().toISOString(),
       });
       showToast(`WhatsApp opened for ${loan.name}`);
     } catch (error) {
-      showToast('Could not open WhatsApp');
+      showToast(error?.message || 'Could not open WhatsApp');
     }
   };
 
@@ -171,15 +178,24 @@ export default function PersonalLoansScreen() {
         </Pressable>
 
         {personalLoans.length ? (
-          personalLoans.map((loan) => (
+          personalLoans.map((loan) => {
+            const status = loanStatusMap[loan.status] || loanStatusMap.pending;
+            return (
             <GlassCard key={loan.id} style={styles.loanCard}>
               <View style={styles.loanTop}>
                 <View style={styles.loanCopy}>
                   <Text style={styles.loanName}>{loan.name}</Text>
-                  <Text style={styles.loanMeta}>{loan.phone || 'No phone'} - {formatDate(loan.createdAt)}</Text>
+                  <Text style={styles.loanMeta}>{formatPhoneDisplay(loan.phone)} - {formatDate(loan.createdAt)}</Text>
                 </View>
-                <View style={[styles.statusBadge, loan.status === 'paid' ? styles.statusPaid : styles.statusPending]}>
-                  <Text style={styles.statusText}>{loan.status === 'paid' ? 'Paid' : 'Pending'}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    status.style === 'paid' ? styles.statusPaid : null,
+                    status.style === 'pending' ? styles.statusPending : null,
+                    status.style === 'reminded' ? styles.statusReminded : null,
+                  ]}
+                >
+                  <Text style={styles.statusText}>{status.label}</Text>
                 </View>
               </View>
               <Text style={[styles.loanAmount, loan.status === 'paid' ? styles.loanAmountPaid : null]}>
@@ -203,7 +219,8 @@ export default function PersonalLoansScreen() {
                 </Pressable>
               </View>
             </GlassCard>
-          ))
+          );
+          })
         ) : (
           <GlassCard>
             <Text style={styles.emptyTitle}>No personal dues yet.</Text>
@@ -240,7 +257,8 @@ export default function PersonalLoansScreen() {
                   keyboardType="phone-pad"
                   style={styles.input}
                   value={form.phone}
-                  onChangeText={(text) => setForm((current) => ({ ...current, phone: text }))}
+                  onChangeText={(text) => setForm((current) => ({ ...current, phone: normalizePhoneInput(text) }))}
+                  maxLength={10}
                 />
                 <TextInput
                   placeholder="Amount"
@@ -371,6 +389,9 @@ const styles = StyleSheet.create({
   },
   statusPaid: {
     backgroundColor: 'rgba(16,185,129,0.18)',
+  },
+  statusReminded: {
+    backgroundColor: 'rgba(245,158,11,0.18)',
   },
   statusText: {
     color: colors.textPrimary,

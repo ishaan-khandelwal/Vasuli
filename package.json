@@ -10,6 +10,7 @@
     "android:local": "powershell -ExecutionPolicy Bypass -File ./scripts/run-android.ps1",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "build": "expo export --platform web",
     "prebuild": "expo prebuild",
     "prebuild:clean": "expo prebuild --clean"
   },

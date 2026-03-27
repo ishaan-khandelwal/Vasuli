@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import GlassCard from './GlassCard';
 import { colors } from '../constants/colors';
-import { formatCurrency, getInitials } from '../utils/formatters';
+import { formatCurrency, formatPhoneDisplay, getInitials } from '../utils/formatters';
 import WhatsAppButton from './WhatsAppButton';
 
 const statusMap = {
@@ -21,6 +21,7 @@ export default function DebtorCard({
   onCopy,
 }) {
   const status = statusMap[debtor.status] || statusMap.pending;
+  const canRemind = debtor.status !== 'paid';
 
   return (
     <GlassCard style={styles.card}>
@@ -31,22 +32,28 @@ export default function DebtorCard({
           </View>
           <View style={styles.copyBlock}>
             <Text style={styles.name}>{debtor.name}</Text>
-            <Text style={styles.phone}>{debtor.phone}</Text>
+            <Text style={styles.phone}>{formatPhoneDisplay(debtor.phone)}</Text>
             {!!groupName && <Text style={styles.group}>{groupName}</Text>}
           </View>
         </View>
         <View style={[styles.badge, { backgroundColor: `${status.color}22` }]}>
-          <Text style={[styles.badgeText, { color: status.color }]}>o {status.label}</Text>
+          <Text style={[styles.badgeText, { color: status.color }]}>{status.label}</Text>
         </View>
       </View>
       <Text style={styles.amount}>{formatCurrency(debtor.amount)}</Text>
-      <Text style={styles.sub}>Owes {creditor?.name || 'organizer'} - tap to nudge or settle</Text>
+      <Text style={styles.sub}>
+        {debtor.status === 'paid'
+          ? `Settled with ${creditor?.name || 'organizer'}`
+          : `Owes ${creditor?.name || 'organizer'} - tap to nudge or settle`}
+      </Text>
       <View style={styles.actions}>
-        <WhatsAppButton onPress={onWhatsApp} compact />
-        <Pressable onPress={onMarkPaid} style={styles.secondaryButton}>
-          <Feather name="check-circle" size={16} color={colors.success} />
-          <Text style={styles.secondaryText}>Mark Paid</Text>
-        </Pressable>
+        {canRemind ? <WhatsAppButton onPress={onWhatsApp} compact /> : null}
+        {canRemind ? (
+          <Pressable onPress={onMarkPaid} style={styles.secondaryButton}>
+            <Feather name="check-circle" size={16} color={colors.success} />
+            <Text style={styles.secondaryText}>Mark Paid</Text>
+          </Pressable>
+        ) : null}
         <Pressable onPress={onCopy} style={styles.iconButton}>
           <Feather name="copy" size={16} color={colors.textPrimary} />
         </Pressable>
@@ -107,6 +114,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   badgeText: {
     fontSize: 12,
@@ -131,8 +140,8 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     flex: 1,
-    minWidth: 140,
-    paddingVertical: 11,
+    minWidth: 132,
+    minHeight: 48,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -148,8 +157,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   iconButton: {
-    width: 42,
-    height: 42,
+    width: 48,
+    height: 48,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
