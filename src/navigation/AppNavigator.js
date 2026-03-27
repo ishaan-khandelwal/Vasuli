@@ -4,7 +4,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabNavigator from './TabNavigator';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import GroupDetailScreen from '../screens/GroupDetailScreen';
+import SplashScreen from '../screens/SplashScreen';
+import LoginScreen from '../screens/LoginScreen';
+import SignupScreen from '../screens/SignupScreen';
 import { colors } from '../constants/colors';
+import { useApp } from '../context/AppContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,12 +25,25 @@ const theme = {
 };
 
 export default function AppNavigator() {
+  const { loading, isAuthenticated } = useApp();
+
   return (
     <NavigationContainer theme={theme}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-        <Stack.Screen name="Tabs" component={TabNavigator} />
-        <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
-        <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+        {loading ? (
+          <Stack.Screen name="Splash" component={SplashScreen} />
+        ) : isAuthenticated ? (
+          <>
+            <Stack.Screen name="Tabs" component={TabNavigator} />
+            <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
+            <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Signup" component={SignupScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

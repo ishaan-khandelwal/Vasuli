@@ -6,6 +6,8 @@ import { normalizePhoneInput } from './formatters';
 const GROUPS_KEY = 'vasuli_groups';
 const PROFILE_KEY = 'vasuli_profile';
 const PERSONAL_LOANS_KEY = 'vasuli_personal_loans';
+const AUTH_USER_KEY = 'vasuli_auth_user';
+const AUTH_SESSION_KEY = 'vasuli_auth_session';
 
 const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
@@ -77,11 +79,16 @@ export const defaultProfile = {
   messageTemplate: defaultMessage,
 };
 
+const defaultAuthSession = {
+  isAuthenticated: false,
+};
+
 export const bootstrapStorage = async () => {
-  const [groups, profile, personalLoans] = await Promise.all([
+  const [groups, profile, personalLoans, session] = await Promise.all([
     AsyncStorage.getItem(GROUPS_KEY),
     AsyncStorage.getItem(PROFILE_KEY),
     AsyncStorage.getItem(PERSONAL_LOANS_KEY),
+    AsyncStorage.getItem(AUTH_SESSION_KEY),
   ]);
 
   if (!groups) {
@@ -94,6 +101,10 @@ export const bootstrapStorage = async () => {
 
   if (!personalLoans) {
     await AsyncStorage.setItem(PERSONAL_LOANS_KEY, JSON.stringify([]));
+  }
+
+  if (!session) {
+    await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(defaultAuthSession));
   }
 };
 
@@ -140,8 +151,36 @@ export const savePersonalLoans = async (personalLoans) => {
   await AsyncStorage.setItem(PERSONAL_LOANS_KEY, JSON.stringify(normalized));
 };
 
+export const getAuthUser = async () => {
+  const raw = await AsyncStorage.getItem(AUTH_USER_KEY);
+  return raw ? JSON.parse(raw) : null;
+};
+
+export const saveAuthUser = async (authUser) => {
+  await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(authUser));
+};
+
+export const clearAuthUser = async () => {
+  await AsyncStorage.removeItem(AUTH_USER_KEY);
+};
+
+export const getAuthSession = async () => {
+  const raw = await AsyncStorage.getItem(AUTH_SESSION_KEY);
+  return raw ? JSON.parse(raw) : defaultAuthSession;
+};
+
+export const saveAuthSession = async (session) => {
+  await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+};
+
 export const clearAllStorage = async () => {
-  await AsyncStorage.multiRemove([GROUPS_KEY, PROFILE_KEY, PERSONAL_LOANS_KEY]);
+  await AsyncStorage.multiRemove([
+    GROUPS_KEY,
+    PROFILE_KEY,
+    PERSONAL_LOANS_KEY,
+    AUTH_USER_KEY,
+    AUTH_SESSION_KEY,
+  ]);
   await bootstrapStorage();
 };
 

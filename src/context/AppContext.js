@@ -2,9 +2,13 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import {
   bootstrapStorage,
   clearAllStorage,
+  getAuthSession,
+  getAuthUser,
   getGroups,
   getPersonalLoans,
   getProfile,
+  saveAuthSession,
+  saveAuthUser,
   saveGroups,
   savePersonalLoans,
   saveProfile,
@@ -23,19 +27,25 @@ export const AppProvider = ({ children }) => {
   const [groups, setGroups] = useState([]);
   const [personalLoans, setPersonalLoans] = useState([]);
   const [profile, setProfile] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadApp = async () => {
     setLoading(true);
     await bootstrapStorage();
-    const [storedGroups, storedProfile, storedPersonalLoans] = await Promise.all([
+    const [storedGroups, storedProfile, storedPersonalLoans, storedAuthUser, storedSession] = await Promise.all([
       getGroups(),
       getProfile(),
       getPersonalLoans(),
+      getAuthUser(),
+      getAuthSession(),
     ]);
     setGroups(withComputedSettlements(storedGroups));
     setPersonalLoans(storedPersonalLoans);
     setProfile(storedProfile);
+    setAuthUser(storedAuthUser);
+    setIsAuthenticated(Boolean(storedSession?.isAuthenticated && storedAuthUser));
     setLoading(false);
   };
 
@@ -126,6 +136,53 @@ export const AppProvider = ({ children }) => {
     await persistPersonalLoans((current) => current.filter((loan) => loan.id !== loanId));
   };
 
+  const signIn = async ({ email, password }) => {
+    const storedAuthUser = await getAuthUser();
+    if (!storedAuthUser) {
+      throw new Error('No account found. Create one first.');
+    }
+    if (storedAuthUser.email.toLowerCase() !== email.trim().toLowerCase() || storedAuthUser.password !== password) {
+      throw new Error('Incorrect email or password.');
+    }
+
+    const session = { isAuthenticated: true };
+    await saveAuthSession(session);
+    setAuthUser(storedAuthUser);
+    setIsAuthenticated(true);
+  };
+
+  const signUp = async ({ name, email, password }) => {
+    const existingAuthUser = await getAuthUser();
+    if (existingAuthUser?.email?.toLowerCase() === email.trim().toLowerCase()) {
+      throw new Error('An account with this email already exists.');
+    }
+
+    const nextAuthUser = {
+      id: Date.now().toString(),
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+    };
+    await saveAuthUser(nextAuthUser);
+    await saveAuthSession({ isAuthenticated: true });
+    setAuthUser(nextAuthUser);
+    setIsAuthenticated(true);
+
+    const nextProfile = {
+      ...(profile || {}),
+      name: nextAuthUser.name,
+      defaultCountryCode: profile?.defaultCountryCode || '91',
+      messageTemplate: profile?.messageTemplate || 'Hi [Name], this is a reminder for [Amount] from [GroupName].',
+    };
+    setProfile(nextProfile);
+    await saveProfile(nextProfile);
+  };
+
+  const signOut = async () => {
+    await saveAuthSession({ isAuthenticated: false });
+    setIsAuthenticated(false);
+  };
+
   const resetApp = async () => {
     await clearAllStorage();
     await loadApp();
@@ -136,6 +193,8 @@ export const AppProvider = ({ children }) => {
       groups,
       personalLoans,
       profile,
+      authUser,
+      isAuthenticated,
       loading,
       reload: loadApp,
       createGroup,
@@ -148,9 +207,12 @@ export const AppProvider = ({ children }) => {
       deleteExpense,
       updateSettlementStatus,
       updateUserProfile,
+      signIn,
+      signUp,
+      signOut,
       resetApp,
     }),
-    [groups, personalLoans, profile, loading]
+    [groups, personalLoans, profile, authUser, isAuthenticated, loading]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

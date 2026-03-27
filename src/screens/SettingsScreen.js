@@ -9,7 +9,7 @@ import { buildReminderMessage } from '../utils/whatsapp';
 import { formatCurrency } from '../utils/formatters';
 
 export default function SettingsScreen() {
-  const { profile, updateUserProfile, resetApp } = useApp();
+  const { profile, authUser, updateUserProfile, resetApp, signOut } = useApp();
   const { showToast } = useToast();
   const [draft, setDraft] = useState(profile);
 
@@ -50,6 +50,18 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleSignOut = () => {
+    Alert.alert('Sign out', 'Sign out from this device?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        onPress: async () => {
+          await signOut();
+        },
+      },
+    ]);
+  };
+
   return (
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -58,6 +70,8 @@ export default function SettingsScreen() {
           <Text style={styles.subtitle}>Profile, WhatsApp template, and app controls.</Text>
 
           <GlassCard style={styles.card}>
+            <Text style={styles.accountLabel}>Signed in as</Text>
+            <Text style={styles.accountValue}>{authUser?.email || 'Local account'}</Text>
             <Text style={styles.label}>Your Name</Text>
             <TextInput
               value={draft.name}
@@ -92,6 +106,10 @@ export default function SettingsScreen() {
             <LinearGradient colors={gradients.primary} style={styles.saveButton}>
               <Text style={styles.saveText}>Save Settings</Text>
             </LinearGradient>
+          </Pressable>
+
+          <Pressable onPress={handleSignOut} style={styles.signOutButton}>
+            <Text style={styles.signOutText}>Sign out</Text>
           </Pressable>
 
           <Pressable onPress={clearData} style={styles.clearButton}>
@@ -133,6 +151,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 8,
     marginTop: 6,
+  },
+  accountLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  accountValue: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 8,
   },
   input: {
     backgroundColor: colors.white10,
@@ -176,6 +208,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239,68,68,0.14)',
     borderWidth: 1,
     borderColor: 'rgba(239,68,68,0.35)',
+  },
+  signOutButton: {
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 14,
+  },
+  signOutText: {
+    color: colors.textPrimary,
+    fontWeight: '800',
   },
   clearText: {
     color: colors.danger,
