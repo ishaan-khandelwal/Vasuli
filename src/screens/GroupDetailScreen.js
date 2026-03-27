@@ -198,7 +198,7 @@ export default function GroupDetailScreen({ route, navigation }) {
           </Pressable>
           <Text style={styles.headerTitle}>{group.name}</Text>
           <Text style={styles.headerMeta}>
-            {category.emoji} {group.category} • {formatDate(group.date)}
+            {category.emoji} {group.category} - {formatDate(group.date)}
           </Text>
           <Text style={styles.headerAmount}>{formatCurrency(summary.totalExpense)}</Text>
         </LinearGradient>
@@ -386,6 +386,9 @@ export default function GroupDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
+    width: '100%',
+    maxWidth: 860,
+    alignSelf: 'center',
     paddingBottom: 40,
   },
   header: {
@@ -421,9 +424,11 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 20,
     marginTop: 18,
     marginBottom: 12,
+    gap: 10,
   },
   tabContent: {
     marginHorizontal: 12,
@@ -439,7 +444,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 16,
-    marginRight: 10,
     backgroundColor: colors.white10,
   },
   activeTab: {

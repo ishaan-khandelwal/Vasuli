@@ -73,9 +73,15 @@ export default function TabNavigator() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
     height: 84,
+    maxWidth: 760,
+    alignSelf: 'center',
     backgroundColor: 'rgba(11,14,30,0.92)',
     borderTopWidth: 0,
+    borderRadius: 28,
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 18,

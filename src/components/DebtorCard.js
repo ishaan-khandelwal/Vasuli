@@ -29,18 +29,18 @@ export default function DebtorCard({
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{getInitials(debtor.name)}</Text>
           </View>
-          <View>
+          <View style={styles.copyBlock}>
             <Text style={styles.name}>{debtor.name}</Text>
             <Text style={styles.phone}>{debtor.phone}</Text>
             {!!groupName && <Text style={styles.group}>{groupName}</Text>}
           </View>
         </View>
         <View style={[styles.badge, { backgroundColor: `${status.color}22` }]}>
-          <Text style={[styles.badgeText, { color: status.color }]}>● {status.label}</Text>
+          <Text style={[styles.badgeText, { color: status.color }]}>o {status.label}</Text>
         </View>
       </View>
       <Text style={styles.amount}>{formatCurrency(debtor.amount)}</Text>
-      <Text style={styles.sub}>Owes {creditor?.name || 'organizer'} · tap to nudge or settle</Text>
+      <Text style={styles.sub}>Owes {creditor?.name || 'organizer'} - tap to nudge or settle</Text>
       <View style={styles.actions}>
         <WhatsAppButton onPress={onWhatsApp} compact />
         <Pressable onPress={onMarkPaid} style={styles.secondaryButton}>
@@ -63,11 +63,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 12,
   },
   profile: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+  },
+  copyBlock: {
+    flex: 1,
+    marginRight: 8,
   },
   avatar: {
     width: 46,
@@ -120,11 +125,13 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     marginTop: 16,
+    gap: 8,
   },
   secondaryButton: {
     flex: 1,
-    marginLeft: 8,
+    minWidth: 140,
     paddingVertical: 11,
     borderRadius: 16,
     borderWidth: 1,
@@ -141,7 +148,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   iconButton: {
-    marginLeft: 8,
     width: 42,
     height: 42,
     borderRadius: 14,

@@ -35,7 +35,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl tintColor={colors.textPrimary} refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.brand}>Vasuli 💸</Text>
+        <Text style={styles.brand}>Vasuli</Text>
         <Text style={styles.subtitle}>Split. Track. Recover.</Text>
 
         <LinearGradient colors={gradients.primary} style={styles.banner}>
@@ -64,8 +64,8 @@ export default function HomeScreen() {
           ))
         ) : (
           <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>✨</Text>
-            <Text style={styles.emptyTitle}>Start your first Vasuli group!</Text>
+            <Text style={styles.emptyEyebrow}>Start</Text>
+            <Text style={styles.emptyTitle}>Start your first Vasuli group.</Text>
             <Text style={styles.emptyText}>Track anything from dinner bills to weekend trips.</Text>
           </View>
         )}
@@ -83,6 +83,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     paddingHorizontal: 20,
     paddingTop: 68,
     paddingBottom: 120,
@@ -129,14 +132,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 48,
   },
-  emptyEmoji: {
-    fontSize: 54,
+  emptyEyebrow: {
+    color: colors.accent,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 4,
+    textTransform: 'uppercase',
     marginBottom: 14,
   },
   emptyTitle: {
     color: colors.textPrimary,
     fontSize: 22,
     fontWeight: '800',
+    textAlign: 'center',
   },
   emptyText: {
     color: colors.textSecondary,

@@ -3,7 +3,6 @@
     "name": "Vasuli",
     "slug": "vasuli",
     "version": "1.0.0",
-    "newArchEnabled": true,
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "splash": {

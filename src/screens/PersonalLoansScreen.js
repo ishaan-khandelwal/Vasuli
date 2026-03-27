@@ -174,9 +174,9 @@ export default function PersonalLoansScreen() {
           personalLoans.map((loan) => (
             <GlassCard key={loan.id} style={styles.loanCard}>
               <View style={styles.loanTop}>
-                <View>
+                <View style={styles.loanCopy}>
                   <Text style={styles.loanName}>{loan.name}</Text>
-                  <Text style={styles.loanMeta}>{loan.phone || 'No phone'} · {formatDate(loan.createdAt)}</Text>
+                  <Text style={styles.loanMeta}>{loan.phone || 'No phone'} - {formatDate(loan.createdAt)}</Text>
                 </View>
                 <View style={[styles.statusBadge, loan.status === 'paid' ? styles.statusPaid : styles.statusPending]}>
                   <Text style={styles.statusText}>{loan.status === 'paid' ? 'Paid' : 'Pending'}</Text>
@@ -286,6 +286,9 @@ export default function PersonalLoansScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     paddingTop: 68,
     paddingHorizontal: 20,
     paddingBottom: 120,
@@ -343,6 +346,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 12,
+  },
+  loanCopy: {
+    flex: 1,
+    marginRight: 8,
   },
   loanName: {
     color: colors.textPrimary,
@@ -387,6 +395,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginTop: 16,
+    gap: 8,
   },
   actionChip: {
     paddingHorizontal: 12,
@@ -395,8 +404,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white10,
     borderWidth: 1,
     borderColor: colors.border,
-    marginRight: 8,
-    marginBottom: 8,
   },
   actionChipText: {
     color: colors.textPrimary,

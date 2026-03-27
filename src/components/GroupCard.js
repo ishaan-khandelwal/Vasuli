@@ -16,7 +16,7 @@ export default function GroupCard({ group, summary, onPress, index = 0 }) {
         <GlassCard style={styles.card}>
           <LinearGradient colors={['rgba(108,99,255,0.22)', 'rgba(59,130,246,0.08)']} style={styles.glow} />
           <View style={styles.row}>
-            <View>
+            <View style={styles.titleBlock}>
               <Text style={styles.title}>{group.name}</Text>
               <Text style={styles.subtitle}>{formatDate(group.date)}</Text>
             </View>
@@ -40,7 +40,7 @@ export default function GroupCard({ group, summary, onPress, index = 0 }) {
                 { color: summary.pendingAmount > 0 ? colors.danger : colors.success },
               ]}
             >
-              {summary.pendingAmount > 0 ? formatCurrency(summary.pendingAmount) : 'Settled ✓'}
+              {summary.pendingAmount > 0 ? formatCurrency(summary.pendingAmount) : 'Settled'}
             </Text>
           </View>
         </GlassCard>
@@ -60,12 +60,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 12,
+  },
+  titleBlock: {
+    flex: 1,
+    marginRight: 8,
   },
   title: {
     color: colors.textPrimary,
     fontSize: 20,
     fontWeight: '800',
-    maxWidth: 210,
   },
   subtitle: {
     color: colors.textSecondary,
@@ -98,13 +102,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   pendingLabel: {
     color: colors.textSecondary,
     fontSize: 13,
+    flex: 1,
   },
   pendingValue: {
     fontSize: 18,
     fontWeight: '800',
+    textAlign: 'right',
   },
 });

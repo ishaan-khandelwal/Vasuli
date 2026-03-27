@@ -10,7 +10,7 @@ export default function MemberCard({ member }) {
       ? { label: `Gets back ${formatCurrency(member.net)}`, color: colors.success }
       : member.net < -0.01
         ? { label: `Owes ${formatCurrency(Math.abs(member.net))}`, color: colors.danger }
-        : { label: 'Settled ✓', color: colors.textSecondary };
+        : { label: 'Settled', color: colors.textSecondary };
 
   return (
     <GlassCard style={styles.card}>
@@ -19,7 +19,7 @@ export default function MemberCard({ member }) {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{getInitials(member.name)}</Text>
           </View>
-          <View>
+          <View style={styles.copyBlock}>
             <Text style={styles.name}>{member.name}</Text>
             <Text style={styles.sub}>Paid {formatCurrency(member.paid)}</Text>
             <Text style={styles.sub}>Share {formatCurrency(member.share)}</Text>
@@ -41,12 +41,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   profile: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     marginRight: 12,
+  },
+  copyBlock: {
+    flex: 1,
   },
   avatar: {
     width: 42,
