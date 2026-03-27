@@ -32,7 +32,10 @@ export default function SettingsScreen() {
   if (!draft) return null;
 
   const save = async () => {
-    await updateUserProfile(draft);
+    await updateUserProfile({
+      ...draft,
+      defaultCountryCode: draft.defaultCountryCode || '91',
+    });
     showToast('Settings saved');
   };
 

@@ -118,8 +118,12 @@ export const AppProvider = ({ children }) => {
   };
 
   const updateUserProfile = async (nextProfile) => {
-    setProfile(nextProfile);
-    await saveProfile(nextProfile);
+    const normalizedProfile = {
+      ...nextProfile,
+      defaultCountryCode: `${nextProfile.defaultCountryCode || '91'}`.replace(/[^\d]/g, '') || '91',
+    };
+    setProfile(normalizedProfile);
+    await saveProfile(normalizedProfile);
   };
 
   const createPersonalLoan = async (loan) => {
@@ -180,6 +184,7 @@ export const AppProvider = ({ children }) => {
 
   const signOut = async () => {
     await saveAuthSession({ isAuthenticated: false });
+    setAuthUser(null);
     setIsAuthenticated(false);
   };
 
