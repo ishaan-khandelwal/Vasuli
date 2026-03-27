@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Vasuli",
+    "slug": "vasuli",
+    "version": "1.0.0",
+    "newArchEnabled": true,
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0F0F1A"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.vasuli.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.vasuli.app"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}
