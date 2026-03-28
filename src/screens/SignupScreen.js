@@ -10,19 +10,21 @@ export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSignup = async () => {
+    setErrorMessage('');
     if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('Missing details', 'Complete all fields to create your account.');
+      setErrorMessage('Complete all fields to create your account.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Weak password', 'Use at least 6 characters.');
+      setErrorMessage('Password must be at least 6 characters.');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Password mismatch', 'Your passwords do not match.');
+      setErrorMessage('Passwords do not match.');
       return;
     }
 
@@ -30,7 +32,7 @@ export default function SignupScreen({ navigation }) {
       setSubmitting(true);
       await signUp({ name, email, password });
     } catch (error) {
-      Alert.alert('Signup failed', error.message);
+      setErrorMessage(error.message);
     } finally {
       setSubmitting(false);
     }
@@ -47,41 +49,59 @@ export default function SignupScreen({ navigation }) {
           <Text style={styles.copy}>Create your account to sync group recoveries, reminders, and personal dues with the backend.</Text>
 
           <View style={styles.form}>
+            {errorMessage ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+
             <TextInput
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                setErrorMessage('');
+              }}
               placeholder="Full name"
               placeholderTextColor={colors.muted}
-              style={styles.input}
+              style={[styles.input, errorMessage && !name ? styles.inputError : {}]}
             />
             <TextInput
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                setErrorMessage('');
+              }}
               placeholder="Email"
               placeholderTextColor={colors.muted}
               autoCapitalize="none"
               keyboardType="email-address"
-              style={styles.input}
+              style={[styles.input, errorMessage ? styles.inputError : {}]}
             />
             <TextInput
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                setErrorMessage('');
+              }}
               placeholder="Password"
               placeholderTextColor={colors.muted}
               secureTextEntry
-              style={styles.input}
+              style={[styles.input, errorMessage ? styles.inputError : {}]}
             />
             <TextInput
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                setErrorMessage('');
+              }}
               placeholder="Confirm password"
               placeholderTextColor={colors.muted}
               secureTextEntry
-              style={styles.input}
+              style={[styles.input, errorMessage ? styles.inputError : {}]}
             />
 
             <Pressable onPress={handleSignup} disabled={submitting}>
-              <LinearGradient colors={gradients.primary} style={styles.primaryButton}>
+              <LinearGradient colors={gradients.primary} style={[styles.primaryButton, submitting && { opacity: 0.7 }]}>
                 <Text style={styles.primaryText}>{submitting ? 'Creating Account...' : 'Sign Up'}</Text>
               </LinearGradient>
             </Pressable>
@@ -155,6 +175,20 @@ const styles = StyleSheet.create({
   form: {
     marginTop: 32,
   },
+  errorContainer: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   input: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
@@ -164,6 +198,10 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     color: colors.textPrimary,
     marginBottom: 12,
+  },
+  inputError: {
+    borderColor: 'rgba(239, 68, 68, 0.5)',
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   primaryButton: {
     borderRadius: 18,

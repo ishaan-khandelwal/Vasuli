@@ -8,11 +8,13 @@ export default function LoginScreen({ navigation }) {
   const { signIn } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleLogin = async () => {
+    setErrorMessage('');
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing details', 'Enter your email and password.');
+      setErrorMessage('Enter your email and password.');
       return;
     }
 
@@ -20,7 +22,7 @@ export default function LoginScreen({ navigation }) {
       setSubmitting(true);
       await signIn({ email, password });
     } catch (error) {
-      Alert.alert('Login failed', error.message);
+      setErrorMessage(error.message);
     } finally {
       setSubmitting(false);
     }
@@ -36,26 +38,38 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.copy}>Sign in to open your collections dashboard and continue where you left off.</Text>
 
           <View style={styles.form}>
+            {errorMessage ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+
             <TextInput
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                setErrorMessage('');
+              }}
               placeholder="Email"
               placeholderTextColor={colors.muted}
               autoCapitalize="none"
               keyboardType="email-address"
-              style={styles.input}
+              style={[styles.input, errorMessage ? styles.inputError : {}]}
             />
             <TextInput
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                setErrorMessage('');
+              }}
               placeholder="Password"
               placeholderTextColor={colors.muted}
               secureTextEntry
-              style={styles.input}
+              style={[styles.input, errorMessage ? styles.inputError : {}]}
             />
 
             <Pressable onPress={handleLogin} disabled={submitting}>
-              <LinearGradient colors={gradients.primary} style={styles.primaryButton}>
+              <LinearGradient colors={gradients.primary} style={[styles.primaryButton, submitting && { opacity: 0.7 }]}>
                 <Text style={styles.primaryText}>{submitting ? 'Signing In...' : 'Login'}</Text>
               </LinearGradient>
             </Pressable>
@@ -114,6 +128,20 @@ const styles = StyleSheet.create({
   form: {
     marginTop: 36,
   },
+  errorContainer: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   input: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
@@ -123,6 +151,10 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     color: colors.textPrimary,
     marginBottom: 12,
+  },
+  inputError: {
+    borderColor: 'rgba(239, 68, 68, 0.5)',
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   primaryButton: {
     borderRadius: 18,

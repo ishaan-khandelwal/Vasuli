@@ -22,22 +22,29 @@ const parseResponse = async (response) => {
 };
 
 const request = async (path, { method = 'GET', body, token } = {}) => {
-  const response = await fetch(`${API_URL}${path}`, {
-    method,
-    headers: {
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
 
-  const data = await parseResponse(response);
+    const data = await parseResponse(response);
 
-  if (!response.ok) {
-    throw new Error(data?.message || 'Request failed.');
+    if (!response.ok) {
+      throw new Error(data?.message || 'Request failed.');
+    }
+
+    return data;
+  } catch (error) {
+    if (error.message === 'Network request failed') {
+      throw new Error('Cannot connect to the backend. Please ensure your server is running and your device is on the same network.');
+    }
+    throw error;
   }
-
-  return data;
 };
 
 export const registerUser = (payload) =>
