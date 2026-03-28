@@ -43,6 +43,7 @@ export default function GroupDetailScreen({ route, navigation }) {
   const [editForm, setEditForm] = useState({
     name: group?.name || '',
     category: group?.category || 'Other',
+    members: group?.members || [],
   });
   const [expenseForm, setExpenseForm] = useState({
     title: '',
@@ -183,13 +184,32 @@ export default function GroupDetailScreen({ route, navigation }) {
       Alert.alert('Missing data', 'Please provide a group name.');
       return;
     }
+    const cleanedMembers = editForm.members.map((m) => ({
+      ...m,
+      name: m.name.trim(),
+      phone: m.phone.trim(),
+    }));
+
+    if (cleanedMembers.some((m) => !m.name || !m.phone)) {
+      Alert.alert('Missing data', 'All members must have a name and a phone number.');
+      return;
+    }
+
     await updateGroup(group.id, {
       name: editForm.name.trim(),
       category: editForm.category,
+      members: cleanedMembers,
     });
     await runHapticImpact();
     showToast('Group updated');
     setShowEditModal(false);
+  };
+
+  const updateEditMember = (id, patch) => {
+    setEditForm((current) => ({
+      ...current,
+      members: current.members.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+    }));
   };
 
   const category = categoryMap[group.category] || categoryMap.Other;
@@ -217,7 +237,7 @@ export default function GroupDetailScreen({ route, navigation }) {
             </Pressable>
             <Pressable
               onPress={() => {
-                setEditForm({ name: group.name, category: group.category });
+                setEditForm({ name: group.name, category: group.category, members: group.members });
                 setShowEditModal(true);
               }}
               style={styles.editAction}
@@ -322,40 +342,81 @@ export default function GroupDetailScreen({ route, navigation }) {
 
       <Modal visible={showEditModal} animationType="fade" transparent onRequestClose={() => setShowEditModal(false)}>
         <View style={styles.modalBackdrop}>
-          <GlassCard style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Edit Group</Text>
-            <TextInput
-              placeholder="Group name"
-              placeholderTextColor={colors.muted}
-              style={styles.input}
-              value={editForm.name}
-              onChangeText={(text) => setEditForm((current) => ({ ...current, name: text }))}
-            />
-            <Text style={styles.modalLabel}>Category</Text>
-            <View style={styles.wrapRow}>
-              {Object.keys(categoryMap).map((key) => (
-                <Pressable
-                  key={key}
-                  style={[styles.selectorChip, editForm.category === key && styles.selectorChipActive, styles.wrapChip]}
-                  onPress={() => setEditForm((current) => ({ ...current, category: key }))}
-                >
-                  <Text style={styles.selectorChipText}>
-                    {categoryMap[key].emoji} {key}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <View style={styles.modalActions}>
-              <Pressable style={styles.cancelButton} onPress={() => setShowEditModal(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable onPress={submitEdit} style={{ flex: 1 }}>
-                <LinearGradient colors={gradients.primary} style={styles.saveButton}>
-                  <Text style={styles.actionText}>Update Group</Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </GlassCard>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+            style={{ flex: 1, justifyContent: 'flex-end' }}
+          >
+            <ScrollView
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <GlassCard style={styles.modalCard}>
+                <Text style={styles.modalTitle}>Edit Group</Text>
+                <Text style={styles.modalLabel}>Group details</Text>
+                <TextInput
+                  placeholder="Group name"
+                  placeholderTextColor={colors.muted}
+                  style={styles.input}
+                  value={editForm.name}
+                  onChangeText={(text) => setEditForm((current) => ({ ...current, name: text }))}
+                />
+                <View style={styles.wrapRow}>
+                  {Object.keys(categoryMap).map((key) => (
+                    <Pressable
+                      key={key}
+                      style={[styles.selectorChip, editForm.category === key && styles.selectorChipActive, styles.wrapChip]}
+                      onPress={() => setEditForm((current) => ({ ...current, category: key }))}
+                    >
+                      <Text style={styles.selectorChipText}>
+                        {categoryMap[key].emoji} {key}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={[styles.separator, { marginVertical: 18 }]} />
+
+                <Text style={styles.modalLabel}>Edit member info (Phone numbers)</Text>
+                {editForm.members.map((member, idx) => (
+                  <View key={member.id} style={styles.editMemberRow}>
+                    <Text style={styles.memberIdxText}>{idx + 1}</Text>
+                    <View style={{ flex: 1 }}>
+                      <TextInput
+                        placeholder="Name"
+                        placeholderTextColor={colors.muted}
+                        style={[styles.input, { marginBottom: 6 }]}
+                        value={member.name}
+                        onChangeText={(text) => updateEditMember(member.id, { name: text })}
+                      />
+                      <TextInput
+                        placeholder="Phone number"
+                        placeholderTextColor={colors.muted}
+                        keyboardType="phone-pad"
+                        maxLength={10}
+                        style={styles.input}
+                        value={member.phone}
+                        onChangeText={(text) => updateEditMember(member.id, { phone: text })}
+                      />
+                    </View>
+                  </View>
+                ))}
+
+                <View style={styles.modalActions}>
+                  <Pressable style={styles.cancelButton} onPress={() => setShowEditModal(false)}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable onPress={submitEdit} style={{ flex: 1 }}>
+                    <LinearGradient colors={gradients.primary} style={styles.saveButton}>
+                      <Text style={styles.actionText}>Update Everything</Text>
+                    </LinearGradient>
+                  </Pressable>
+                </View>
+              </GlassCard>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -683,5 +744,22 @@ const styles = StyleSheet.create({
   deleteGroupText: {
     color: colors.danger,
     fontWeight: '800',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: colors.border,
+    width: '100%',
+  },
+  editMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  memberIdxText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '800',
+    marginRight: 12,
+    marginTop: 14,
   },
 });

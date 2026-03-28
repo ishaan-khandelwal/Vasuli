@@ -168,10 +168,12 @@ export default function CreateGroupScreen() {
               <DateTimePicker
                 value={date}
                 mode="date"
-                display="default"
-                onChange={(_, nextDate) => {
-                  setShowPicker(false);
-                  if (nextDate) setDate(nextDate);
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, nextDate) => {
+                  setShowPicker(Platform.OS === 'ios');
+                  if (nextDate) {
+                    setDate(nextDate);
+                  }
                 }}
               />
             ) : null}
