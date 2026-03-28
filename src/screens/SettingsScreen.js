@@ -56,12 +56,12 @@ export default function SettingsScreen() {
 
     setConfirmState({
       title: 'Clear all data',
-      message: 'This will reset groups, reminders, personal dues, and settings back to demo state.',
+      message: 'This will reset groups, reminders, personal dues, and settings back to a fresh state.',
       confirmLabel: 'Reset app',
       destructive: true,
       action: async () => {
         await resetApp();
-        showToast('App reset to demo data');
+        showToast('App data reset');
       },
     });
   };

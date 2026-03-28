@@ -79,8 +79,9 @@ export const defaultProfile = {
   messageTemplate: defaultMessage,
 };
 
-const defaultAuthSession = {
+export const defaultAuthSession = {
   isAuthenticated: false,
+  token: null,
 };
 
 export const bootstrapStorage = async () => {

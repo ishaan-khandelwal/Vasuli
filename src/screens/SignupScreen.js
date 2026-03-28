@@ -44,7 +44,7 @@ export default function SignupScreen({ navigation }) {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.brand}>Vasuli</Text>
           <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.copy}>Set up a local account to keep your group recoveries, reminders, and personal dues in one place.</Text>
+          <Text style={styles.copy}>Create your account to sync group recoveries, reminders, and personal dues with the backend.</Text>
 
           <View style={styles.form}>
             <TextInput
@@ -92,8 +92,8 @@ export default function SignupScreen({ navigation }) {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Local mode</Text>
-            <Text style={styles.infoText}>This account is stored on this device for now.</Text>
+            <Text style={styles.infoLabel}>Cloud sync</Text>
+            <Text style={styles.infoText}>Your login and app data can now be stored in MongoDB through the Node.js backend.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
