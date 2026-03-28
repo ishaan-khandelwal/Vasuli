@@ -34,11 +34,16 @@ const tabs = ['Expenses', 'Balances', 'Vasuli'];
 
 export default function GroupDetailScreen({ route, navigation }) {
   const { groupId } = route.params;
-  const { groups, profile, addExpense, deleteExpense, deleteGroup, updateSettlementStatus } = useApp();
+  const { groups, profile, addExpense, deleteExpense, deleteGroup, updateGroup, updateSettlementStatus } = useApp();
   const { showToast } = useToast();
   const group = groups.find((item) => item.id === groupId);
   const [activeTab, setActiveTab] = useState('Expenses');
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: group?.name || '',
+    category: group?.category || 'Other',
+  });
   const [expenseForm, setExpenseForm] = useState({
     title: '',
     amount: '',
@@ -173,6 +178,20 @@ export default function GroupDetailScreen({ route, navigation }) {
     }
   };
 
+  const submitEdit = async () => {
+    if (!editForm.name.trim()) {
+      Alert.alert('Missing data', 'Please provide a group name.');
+      return;
+    }
+    await updateGroup(group.id, {
+      name: editForm.name.trim(),
+      category: editForm.category,
+    });
+    await runHapticImpact();
+    showToast('Group updated');
+    setShowEditModal(false);
+  };
+
   const category = categoryMap[group.category] || categoryMap.Other;
 
   const handleDeleteGroup = async () => {
@@ -192,9 +211,20 @@ export default function GroupDetailScreen({ route, navigation }) {
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <LinearGradient colors={gradients.primary} style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.back}>
-            <Feather name="chevron-left" size={20} color={colors.textPrimary} />
-          </Pressable>
+          <View style={styles.headerTop}>
+            <Pressable onPress={() => navigation.goBack()} style={styles.back}>
+              <Feather name="chevron-left" size={20} color={colors.textPrimary} />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setEditForm({ name: group.name, category: group.category });
+                setShowEditModal(true);
+              }}
+              style={styles.editAction}
+            >
+              <Feather name="edit-3" size={18} color={colors.textPrimary} />
+            </Pressable>
+          </View>
           <Text style={styles.headerTitle}>{group.name}</Text>
           <Text style={styles.headerMeta}>
             {category.emoji} {group.category} - {formatDate(group.date)}
@@ -289,6 +319,45 @@ export default function GroupDetailScreen({ route, navigation }) {
           </View>
         ) : null}
       </ScrollView>
+
+      <Modal visible={showEditModal} animationType="fade" transparent onRequestClose={() => setShowEditModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <GlassCard style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit Group</Text>
+            <TextInput
+              placeholder="Group name"
+              placeholderTextColor={colors.muted}
+              style={styles.input}
+              value={editForm.name}
+              onChangeText={(text) => setEditForm((current) => ({ ...current, name: text }))}
+            />
+            <Text style={styles.modalLabel}>Category</Text>
+            <View style={styles.wrapRow}>
+              {Object.keys(categoryMap).map((key) => (
+                <Pressable
+                  key={key}
+                  style={[styles.selectorChip, editForm.category === key && styles.selectorChipActive, styles.wrapChip]}
+                  onPress={() => setEditForm((current) => ({ ...current, category: key }))}
+                >
+                  <Text style={styles.selectorChipText}>
+                    {categoryMap[key].emoji} {key}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.modalActions}>
+              <Pressable style={styles.cancelButton} onPress={() => setShowEditModal(false)}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={submitEdit} style={{ flex: 1 }}>
+                <LinearGradient colors={gradients.primary} style={styles.saveButton}>
+                  <Text style={styles.actionText}>Update Group</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </GlassCard>
+        </View>
+      </Modal>
 
       <Modal visible={showExpenseModal} animationType="slide" transparent onRequestClose={() => setShowExpenseModal(false)}>
         <View style={styles.modalBackdrop}>
@@ -398,6 +467,20 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 28,
     borderTopWidth: 0,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  editAction: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
   back: {
     width: 38,
     height: 38,
@@ -405,7 +488,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.16)',
-    marginBottom: 16,
   },
   headerTitle: {
     color: colors.textPrimary,
