@@ -33,6 +33,7 @@ export default function PersonalLoansScreen() {
   const { personalLoans, profile, createPersonalLoan, updatePersonalLoan, deletePersonalLoan } = useApp();
   const { showToast } = useToast();
   const [showModal, setShowModal] = useState(false);
+  const [editingLoanId, setEditingLoanId] = useState(null);
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -51,6 +52,7 @@ export default function PersonalLoansScreen() {
   }, [personalLoans]);
 
   const resetForm = () => {
+    setEditingLoanId(null);
     setForm({
       name: '',
       phone: '',
@@ -59,27 +61,41 @@ export default function PersonalLoansScreen() {
     });
   };
 
-  const handleCreate = async () => {
+  const openCreateModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
+  const handleSave = async () => {
     if (!form.name.trim() || !form.amount.trim()) {
       Alert.alert('Missing details', 'Enter the person name and amount first.');
       return;
     }
 
-    await createPersonalLoan({
-      id: createLocalId(),
+    const payload = {
       name: form.name.trim(),
       phone: normalizePhoneInput(form.phone),
       amount: Number(form.amount),
       note: form.note.trim(),
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      remindedAt: null,
-      paidAt: null,
-    });
+    };
+
+    if (editingLoanId) {
+      await updatePersonalLoan(editingLoanId, payload);
+      showToast('Personal due updated');
+    } else {
+      await createPersonalLoan({
+        id: createLocalId(),
+        ...payload,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        remindedAt: null,
+        paidAt: null,
+      });
+      showToast('Personal due added');
+    }
 
     resetForm();
     setShowModal(false);
-    showToast('Personal due added');
   };
 
   const handleMarkPaid = async (loan) => {
@@ -104,19 +120,16 @@ export default function PersonalLoansScreen() {
     showToast('Personal due deleted');
   };
 
-  const handleEdit = async () => {
+  const handleEdit = (loan) => {
+    setEditingLoanId(loan.id);
     setForm({
-      name: form.name,
-      phone: form.phone,
-      amount: form.amount,
-      note: form.note,
-      createdAt: form.createdAt,
-      remindedAt: form.remindedAt,
-      paidAt: form.paidAt,
-      status: form.status,
-      id: form.id,
-    })
-  }
+      name: loan.name || '',
+      phone: normalizePhoneInput(loan.phone || ''),
+      amount: `${loan.amount ?? ''}`,
+      note: loan.note || '',
+    });
+    setShowModal(true);
+  };
 
   const handleCopy = async (loan) => {
     const message = buildReminderMessage({
@@ -180,7 +193,7 @@ export default function PersonalLoansScreen() {
           <Text style={styles.statValue}>{summary.pendingCount}</Text>
         </GlassCard>
 
-        <Pressable onPress={() => setShowModal(true)} style={styles.addButton}>
+        <Pressable onPress={openCreateModal} style={styles.addButton}>
           <LinearGradient colors={gradients.primary} style={styles.addButtonInner}>
             <Feather name="plus" size={18} color={colors.textPrimary} />
             <Text style={styles.addButtonText}>Add Personal Due</Text>
@@ -256,7 +269,7 @@ export default function PersonalLoansScreen() {
               showsVerticalScrollIndicator={false}
             >
               <GlassCard style={styles.modalCard}>
-                <Text style={styles.modalTitle}>Add Personal Due</Text>
+                <Text style={styles.modalTitle}>{editingLoanId ? 'Edit Personal Due' : 'Add Personal Due'}</Text>
                 <TextInput
                   placeholder="Person name"
                   placeholderTextColor={colors.muted}
@@ -299,9 +312,9 @@ export default function PersonalLoansScreen() {
                   >
                     <Text style={styles.cancelText}>Cancel</Text>
                   </Pressable>
-                  <Pressable onPress={handleCreate} style={{ flex: 1 }}>
+                  <Pressable onPress={handleSave} style={{ flex: 1 }}>
                     <LinearGradient colors={gradients.primary} style={styles.saveButton}>
-                      <Text style={styles.saveButtonText}>Save Due</Text>
+                      <Text style={styles.saveButtonText}>{editingLoanId ? 'Update Due' : 'Save Due'}</Text>
                     </LinearGradient>
                   </Pressable>
                 </View>
