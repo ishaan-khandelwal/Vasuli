@@ -209,10 +209,10 @@ export default function CreateGroupScreen() {
                 onChange={handleDateChange}
               />
             ) : null}
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{category === 'Other' ? 'What is this for?' : 'Description'}</Text>
             <TextInput
               ref={descriptionRef}
-              placeholder="What is this group for?"
+              placeholder={category === 'Other' ? 'Explain what this group is for' : 'What is this group for?'}
               placeholderTextColor={colors.muted}
               value={description}
               onChangeText={setDescription}
