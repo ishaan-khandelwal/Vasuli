@@ -104,6 +104,20 @@ export default function PersonalLoansScreen() {
     showToast('Personal due deleted');
   };
 
+  const handleEdit = async () => {
+    setForm({
+      name: form.name,
+      phone: form.phone,
+      amount: form.amount,
+      note: form.note,
+      createdAt: form.createdAt,
+      remindedAt: form.remindedAt,
+      paidAt: form.paidAt,
+      status: form.status,
+      id: form.id,
+    })
+  }
+
   const handleCopy = async (loan) => {
     const message = buildReminderMessage({
       template: profile.messageTemplate,
@@ -177,45 +191,48 @@ export default function PersonalLoansScreen() {
           personalLoans.map((loan) => {
             const status = loanStatusMap[loan.status] || loanStatusMap.pending;
             return (
-            <GlassCard key={loan.id} style={styles.loanCard}>
-              <View style={styles.loanTop}>
-                <View style={styles.loanCopy}>
-                  <Text style={styles.loanName}>{loan.name}</Text>
-                  <Text style={styles.loanMeta}>{formatPhoneDisplay(loan.phone)} - {formatDate(loan.createdAt)}</Text>
+              <GlassCard key={loan.id} style={styles.loanCard}>
+                <View style={styles.loanTop}>
+                  <View style={styles.loanCopy}>
+                    <Text style={styles.loanName}>{loan.name}</Text>
+                    <Text style={styles.loanMeta}>{formatPhoneDisplay(loan.phone)} - {formatDate(loan.createdAt)}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      status.style === 'paid' ? styles.statusPaid : null,
+                      status.style === 'pending' ? styles.statusPending : null,
+                      status.style === 'reminded' ? styles.statusReminded : null,
+                    ]}
+                  >
+                    <Text style={styles.statusText}>{status.label}</Text>
+                  </View>
                 </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    status.style === 'paid' ? styles.statusPaid : null,
-                    status.style === 'pending' ? styles.statusPending : null,
-                    status.style === 'reminded' ? styles.statusReminded : null,
-                  ]}
-                >
-                  <Text style={styles.statusText}>{status.label}</Text>
-                </View>
-              </View>
-              <Text style={[styles.loanAmount, loan.status === 'paid' ? styles.loanAmountPaid : null]}>
-                {formatCurrency(loan.amount)}
-              </Text>
-              {loan.note ? <Text style={styles.loanNote}>{loan.note}</Text> : null}
-              <View style={styles.actions}>
-                <Pressable onPress={() => handleWhatsApp(loan)} style={styles.actionChip}>
-                  <Text style={styles.actionChipText}>WhatsApp</Text>
-                </Pressable>
-                <Pressable onPress={() => handleCopy(loan)} style={styles.actionChip}>
-                  <Text style={styles.actionChipText}>Copy</Text>
-                </Pressable>
-                {loan.status !== 'paid' ? (
-                  <Pressable onPress={() => handleMarkPaid(loan)} style={styles.actionChip}>
-                    <Text style={styles.actionChipText}>Mark Paid</Text>
+                <Text style={[styles.loanAmount, loan.status === 'paid' ? styles.loanAmountPaid : null]}>
+                  {formatCurrency(loan.amount)}
+                </Text>
+                {loan.note ? <Text style={styles.loanNote}>{loan.note}</Text> : null}
+                <View style={styles.actions}>
+                  <Pressable onPress={() => handleWhatsApp(loan)} style={styles.actionChip}>
+                    <Text style={styles.actionChipText}>WhatsApp</Text>
                   </Pressable>
-                ) : null}
-                <Pressable onPress={() => handleDelete(loan)} style={[styles.actionChip, styles.deleteChip]}>
-                  <Text style={[styles.actionChipText, styles.deleteChipText]}>Delete</Text>
-                </Pressable>
-              </View>
-            </GlassCard>
-          );
+                  <Pressable onPress={() => handleCopy(loan)} style={styles.actionChip}>
+                    <Text style={styles.actionChipText}>Copy</Text>
+                  </Pressable>
+                  {loan.status !== 'paid' ? (
+                    <Pressable onPress={() => handleMarkPaid(loan)} style={styles.actionChip}>
+                      <Text style={styles.actionChipText}>Mark Paid</Text>
+                    </Pressable>
+                  ) : null}
+                  <Pressable onPress={() => handleDelete(loan)} style={[styles.actionChip, styles.deleteChip]}>
+                    <Text style={[styles.actionChipText, styles.deleteChipText]}>Delete</Text>
+                  </Pressable>
+                  <Pressable onPress={() => handleEdit(loan)} style={styles.actionChip}>
+                    <Text style={styles.actionChipText}>Edit</Text>
+                  </Pressable>
+                </View>
+              </GlassCard>
+            );
           })
         ) : (
           <GlassCard>

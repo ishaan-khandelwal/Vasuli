@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -42,6 +43,42 @@ export default function CreateGroupScreen() {
   ]);
   const [showPicker, setShowPicker] = useState(false);
 
+  const scrollToFocusedField = () => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: Platform.OS === 'ios' });
+    });
+  };
+
+  const handleDateChange = (event, nextDate) => {
+    if (Platform.OS === 'android') {
+      setShowPicker(false);
+
+      if (event.type !== 'set' || !nextDate) {
+        return;
+      }
+    }
+
+    if (nextDate) {
+      setDate(nextDate);
+    }
+  };
+
+  const openDatePicker = () => {
+    Keyboard.dismiss();
+
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: date,
+        mode: 'date',
+        display: 'default',
+        onChange: handleDateChange,
+      });
+      return;
+    }
+
+    setShowPicker((current) => !current);
+  };
+
   const updateMember = (memberId, patch) => {
     setMembers((current) =>
       current.map((member) =>
@@ -59,7 +96,7 @@ export default function CreateGroupScreen() {
     const nextMember = { id: createLocalId(), name: '', phone: '', isOrganizer: false };
     setMembers((current) => [...current, nextMember]);
     requestAnimationFrame(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
+      scrollToFocusedField();
       setTimeout(() => memberNameRefs.current[nextMember.id]?.focus(), 150);
     });
   };
@@ -128,15 +165,15 @@ export default function CreateGroupScreen() {
   return (
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
         style={{ flex: 1 }}
       >
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.content}
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
+          keyboardShouldPersistTaps="always"
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.title}>New Group</Text>
@@ -161,20 +198,15 @@ export default function CreateGroupScreen() {
               ))}
             </ScrollView>
             <Text style={styles.label}>Date</Text>
-            <Pressable style={styles.input} onPress={() => setShowPicker(true)}>
+            <Pressable style={styles.input} onPress={openDatePicker}>
               <Text style={styles.inputText}>{date.toDateString()}</Text>
             </Pressable>
-            {showPicker ? (
+            {showPicker && Platform.OS === 'ios' ? (
               <DateTimePicker
                 value={date}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, nextDate) => {
-                  setShowPicker(Platform.OS === 'ios');
-                  if (nextDate) {
-                    setDate(nextDate);
-                  }
-                }}
+                display="spinner"
+                onChange={handleDateChange}
               />
             ) : null}
             <Text style={styles.label}>Description</Text>
@@ -184,7 +216,7 @@ export default function CreateGroupScreen() {
               placeholderTextColor={colors.muted}
               value={description}
               onChangeText={setDescription}
-              onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
+              onFocus={scrollToFocusedField}
               returnKeyType="done"
               style={[styles.input, styles.textarea]}
               multiline
@@ -210,7 +242,7 @@ export default function CreateGroupScreen() {
                 placeholderTextColor={colors.muted}
                 value={member.name}
                 onChangeText={(text) => updateMember(member.id, { name: text })}
-                onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
+                onFocus={scrollToFocusedField}
                 onSubmitEditing={() => focusNextMemberField(index, 'name')}
                 returnKeyType="next"
                 style={styles.input}
@@ -225,7 +257,7 @@ export default function CreateGroupScreen() {
                 value={member.phone}
                 onChangeText={(text) => updateMember(member.id, { phone: normalizePhoneInput(text) })}
                 maxLength={10}
-                onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
+                onFocus={scrollToFocusedField}
                 onSubmitEditing={() => focusNextMemberField(index, 'phone')}
                 returnKeyType={index === members.length - 1 ? 'done' : 'next'}
                 style={styles.input}
