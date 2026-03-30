@@ -18,7 +18,7 @@ import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
 import { formatCurrency, formatDate, formatPhoneDisplay, normalizePhoneInput } from '../utils/formatters';
 import { createLocalId } from '../utils/storage';
-import { buildReminderMessage, openWhatsApp } from '../utils/whatsapp';
+import { buildReminderMessage, buildSettlementConfirmationMessage, openWhatsApp } from '../utils/whatsapp';
 import { copyText } from '../utils/native';
 import { confirmAction } from '../utils/confirm';
 import GlassCard from '../components/GlassCard';
@@ -104,8 +104,32 @@ export default function PersonalLoansScreen() {
       message: `Mark ${loan.name} as settled?`,
     });
     if (!confirmed) return;
-    await updatePersonalLoan(loan.id, { status: 'paid', paidAt: new Date().toISOString() });
-    showToast(`${loan.name} marked paid`);
+    const paidAt = new Date().toISOString();
+    await updatePersonalLoan(loan.id, { status: 'paid', paidAt });
+
+    if (!loan.phone) {
+      showToast(`${loan.name} marked paid`);
+      return;
+    }
+
+    const message = buildSettlementConfirmationMessage({
+      name: loan.name,
+      amount: formatCurrency(loan.amount),
+      groupName: 'Personal Loan',
+      category: 'Personal',
+      organizerName: profile.name,
+    });
+
+    try {
+      await openWhatsApp({
+        phone: loan.phone,
+        message,
+        countryCode: profile.defaultCountryCode,
+      });
+      showToast(`Confirmation opened for ${loan.name}`);
+    } catch (error) {
+      showToast(`${loan.name} marked paid, but confirmation could not be opened`);
+    }
   };
 
   const handleDelete = async (loan) => {

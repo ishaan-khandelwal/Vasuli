@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
 import { summarizeAllGroups } from '../utils/calculations';
-import { buildReminderMessage, openWhatsApp } from '../utils/whatsapp';
+import { buildReminderMessage, buildSettlementConfirmationMessage, openWhatsApp } from '../utils/whatsapp';
 import { formatCurrency } from '../utils/formatters';
 import { copyText } from '../utils/native';
 import { confirmAction } from '../utils/confirm';
@@ -99,11 +99,31 @@ export default function VasuliDashboardScreen() {
       message: `Mark ${item.name} as paid?`,
     });
     if (!confirmed) return;
+    const paidAt = new Date().toISOString();
     await updateSettlementStatus(item.groupId, item.debtorId, item.creditorId, {
       status: 'paid',
-      paidAt: new Date().toISOString(),
+      paidAt,
     });
-    showToast(`${item.name} settled`);
+
+    if (!item.phone) {
+      showToast(`${item.name} settled`);
+      return;
+    }
+
+    const message = buildSettlementConfirmationMessage({
+      name: item.name,
+      amount: formatCurrency(item.amount),
+      groupName: item.groupName,
+      category: item.category,
+      organizerName: item.organizer?.name || profile.name,
+    });
+
+    try {
+      await openWhatsApp({ phone: item.phone, message, countryCode: profile.defaultCountryCode });
+      showToast(`Confirmation opened for ${item.name}`);
+    } catch (error) {
+      showToast(`${item.name} settled, but confirmation could not be opened`);
+    }
   };
 
   const copyMessage = async (item) => {

@@ -19,7 +19,7 @@ import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
 import { categoryMap } from '../constants/categories';
 import { summarizeGroup } from '../utils/calculations';
-import { buildReminderMessage, openWhatsApp } from '../utils/whatsapp';
+import { buildReminderMessage, buildSettlementConfirmationMessage, openWhatsApp } from '../utils/whatsapp';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { createLocalId } from '../utils/storage';
 import { copyText, runHapticImpact, runHapticSuccess } from '../utils/native';
@@ -146,12 +146,32 @@ export default function GroupDetailScreen({ route, navigation }) {
       message: `Mark ${item.name} as settled?`,
     });
     if (!confirmed) return;
+    const paidAt = new Date().toISOString();
     await updateSettlementStatus(group.id, item.debtorId, item.creditorId, {
       status: 'paid',
-      paidAt: new Date().toISOString(),
+      paidAt,
     });
     await runHapticSuccess();
-    showToast(`${item.name} marked paid`);
+
+    if (!item.phone) {
+      showToast(`${item.name} marked paid`);
+      return;
+    }
+
+    const message = buildSettlementConfirmationMessage({
+      name: item.name,
+      amount: formatCurrency(item.amount),
+      groupName: group.name,
+      category: group.category,
+      organizerName: organizer.name || profile.name,
+    });
+
+    try {
+      await openWhatsApp({ phone: item.phone, message, countryCode: profile.defaultCountryCode });
+      showToast(`Confirmation opened for ${item.name}`);
+    } catch (error) {
+      showToast(`${item.name} marked paid, but confirmation could not be opened`);
+    }
   };
 
   const copyMessage = async (item) => {
