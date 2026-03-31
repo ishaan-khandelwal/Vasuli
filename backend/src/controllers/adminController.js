@@ -1,14 +1,11 @@
 const User = require('../models/User');
 const AppData = require('../models/AppData');
 
-/**
- * Get all users and their basic information
- * NOTE: In a production environment, this route should be protected by an isAdmin middleware.
- */
+
 const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find().sort({ createdAt: -1 });
-    
+
     const safeUsers = users.map(user => user.toSafeObject());
 
     return res.json({
@@ -20,9 +17,7 @@ const getAllUsers = async (req, res, next) => {
   }
 };
 
-/**
- * Get detailed data for a specific user
- */
+
 const getUserDetail = async (req, res, next) => {
   try {
     const { userId } = req.params;

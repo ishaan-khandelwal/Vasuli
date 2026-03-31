@@ -57,6 +57,14 @@ export const AppProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const syncRemoteSnapshot = async (token, fallbackName) => {
+    try {
+      await cacheAppSnapshot(await fetchAppData(token), fallbackName);
+    } catch (error) {
+      console.warn('Using cached data because remote sync failed.', error);
+    }
+  };
+
   const cacheAppSnapshot = async (snapshot, fallbackName) => {
     const normalized = normalizeAppSnapshot(snapshot, fallbackName);
     setGroups(withComputedSettlements(normalized.groups));
@@ -97,17 +105,14 @@ export const AppProvider = ({ children }) => {
     setProfile(cachedSnapshot.profile);
     setAuthUser(storedAuthUser);
     setAuthToken(storedSession?.token || null);
-    setIsAuthenticated(Boolean(storedSession?.isAuthenticated && storedSession?.token && storedAuthUser));
-
-    if (storedSession?.token && storedAuthUser) {
-      try {
-        await cacheAppSnapshot(await fetchAppData(storedSession.token), storedAuthUser.name);
-      } catch (error) {
-        console.warn('Using cached data because remote sync failed.', error);
-      }
-    }
+    const hasStoredSession = Boolean(storedSession?.isAuthenticated && storedSession?.token && storedAuthUser);
+    setIsAuthenticated(hasStoredSession);
 
     setLoading(false);
+
+    if (hasStoredSession) {
+      syncRemoteSnapshot(storedSession.token, storedAuthUser.name);
+    }
   };
 
   useEffect(() => {
