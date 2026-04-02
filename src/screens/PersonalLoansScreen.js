@@ -21,6 +21,7 @@ import { createLocalId } from '../utils/storage';
 import { buildReminderMessage, buildSettlementConfirmationMessage, openWhatsApp } from '../utils/whatsapp';
 import { copyText } from '../utils/native';
 import { confirmAction } from '../utils/confirm';
+import { pickPhoneContact } from '../utils/contacts';
 import GlassCard from '../components/GlassCard';
 
 const loanStatusMap = {
@@ -34,6 +35,7 @@ export default function PersonalLoansScreen() {
   const { showToast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editingLoanId, setEditingLoanId] = useState(null);
+  const [pickingContact, setPickingContact] = useState(false);
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -153,6 +155,29 @@ export default function PersonalLoansScreen() {
       note: loan.note || '',
     });
     setShowModal(true);
+  };
+
+  const handlePickContact = async () => {
+    if (pickingContact) return;
+
+    setPickingContact(true);
+    try {
+      const pickedContact = await pickPhoneContact();
+      if (!pickedContact) {
+        return;
+      }
+
+      setForm((current) => ({
+        ...current,
+        name: pickedContact.name || current.name,
+        phone: pickedContact.phone,
+      }));
+      showToast(`Filled details from ${pickedContact.name || 'contact'}`);
+    } catch (error) {
+      showToast(error?.message || 'Could not open contacts');
+    } finally {
+      setPickingContact(false);
+    }
   };
 
   const handleCopy = async (loan) => {
@@ -301,6 +326,16 @@ export default function PersonalLoansScreen() {
                   value={form.name}
                   onChangeText={(text) => setForm((current) => ({ ...current, name: text }))}
                 />
+                <Pressable
+                  onPress={handlePickContact}
+                  disabled={pickingContact}
+                  style={[styles.contactButton, pickingContact ? styles.contactButtonDisabled : null]}
+                >
+                  <Feather name="book-open" size={16} color={colors.textPrimary} />
+                  <Text style={styles.contactButtonText}>
+                    {pickingContact ? 'Opening contacts...' : 'Choose From Contacts'}
+                  </Text>
+                </Pressable>
                 <TextInput
                   placeholder="Phone number"
                   placeholderTextColor={colors.muted}
@@ -529,6 +564,26 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     color: colors.textPrimary,
     marginBottom: 12,
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+    backgroundColor: colors.white10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  contactButtonDisabled: {
+    opacity: 0.65,
+  },
+  contactButtonText: {
+    color: colors.textPrimary,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   textarea: {
     minHeight: 100,

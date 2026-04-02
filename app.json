@@ -19,13 +19,22 @@
       "**/*"
     ],
     "android": {
-      "package": "com.vasuli.app"
+      "package": "com.vasuli.app",
+      "blockedPermissions": [
+        "android.permission.WRITE_CONTACTS"
+      ]
     },
     "ios": {
       "bundleIdentifier": "com.vasuli.app"
     },
     "plugins": [
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Vasuli to access your contacts so you can fill phone numbers faster."
+        }
+      ]
     ]
   }
 }

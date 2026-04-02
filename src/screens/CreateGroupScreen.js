@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
+import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
 import { categories } from '../constants/categories';
 import CategoryChip from '../components/CategoryChip';
@@ -24,10 +25,12 @@ import GlassCard from '../components/GlassCard';
 import { createLocalId } from '../utils/storage';
 import { normalizePhoneInput } from '../utils/formatters';
 import { runHapticSuccess } from '../utils/native';
+import { pickPhoneContact } from '../utils/contacts';
 
 export default function CreateGroupScreen() {
   const navigation = useNavigation();
   const { createGroup } = useApp();
+  const { showToast } = useToast();
   const scrollRef = useRef(null);
   const groupNameRef = useRef(null);
   const descriptionRef = useRef(null);
@@ -42,6 +45,7 @@ export default function CreateGroupScreen() {
     { id: createLocalId(), name: '', phone: '', isOrganizer: false },
   ]);
   const [showPicker, setShowPicker] = useState(false);
+  const [pickingContactMemberId, setPickingContactMemberId] = useState(null);
 
   const scrollToFocusedField = () => {
     requestAnimationFrame(() => {
@@ -104,6 +108,28 @@ export default function CreateGroupScreen() {
   const removeMember = (memberId) => {
     if (members.length <= 2) return;
     setMembers((current) => current.filter((member) => member.id !== memberId));
+  };
+
+  const handlePickMemberContact = async (memberId) => {
+    if (pickingContactMemberId) return;
+
+    setPickingContactMemberId(memberId);
+    try {
+      const pickedContact = await pickPhoneContact();
+      if (!pickedContact) {
+        return;
+      }
+
+      updateMember(memberId, {
+        name: pickedContact.name,
+        phone: pickedContact.phone,
+      });
+      showToast(`Filled details from ${pickedContact.name || 'contact'}`);
+    } catch (error) {
+      showToast(error?.message || 'Could not open contacts');
+    } finally {
+      setPickingContactMemberId(null);
+    }
   };
 
   const handleCreate = async () => {
@@ -247,6 +273,16 @@ export default function CreateGroupScreen() {
                 returnKeyType="next"
                 style={styles.input}
               />
+              <Pressable
+                onPress={() => handlePickMemberContact(member.id)}
+                disabled={pickingContactMemberId === member.id}
+                style={[styles.contactButton, pickingContactMemberId === member.id ? styles.contactButtonDisabled : null]}
+              >
+                <Feather name="book-open" size={16} color={colors.textPrimary} />
+                <Text style={styles.contactButtonText}>
+                  {pickingContactMemberId === member.id ? 'Opening contacts...' : 'Choose From Contacts'}
+                </Text>
+              </Pressable>
               <TextInput
                 ref={(ref) => {
                   memberPhoneRefs.current[member.id] = ref;
@@ -324,6 +360,26 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     color: colors.textPrimary,
     marginBottom: 10,
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 10,
+    backgroundColor: colors.white10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  contactButtonDisabled: {
+    opacity: 0.65,
+  },
+  contactButtonText: {
+    color: colors.textPrimary,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   inputText: {
     color: colors.textPrimary,

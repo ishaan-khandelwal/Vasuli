@@ -20,10 +20,11 @@ import { colors, gradients } from '../constants/colors';
 import { categoryMap } from '../constants/categories';
 import { summarizeGroup } from '../utils/calculations';
 import { buildReminderMessage, buildSettlementConfirmationMessage, openWhatsApp } from '../utils/whatsapp';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, normalizePhoneInput } from '../utils/formatters';
 import { createLocalId } from '../utils/storage';
 import { copyText, runHapticImpact, runHapticSuccess } from '../utils/native';
 import { confirmAction } from '../utils/confirm';
+import { pickPhoneContact } from '../utils/contacts';
 import GlassCard from '../components/GlassCard';
 import ExpenseCard from '../components/ExpenseCard';
 import MemberCard from '../components/MemberCard';
@@ -40,6 +41,7 @@ export default function GroupDetailScreen({ route, navigation }) {
   const [activeTab, setActiveTab] = useState('Expenses');
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [pickingContactMemberId, setPickingContactMemberId] = useState(null);
   const [editForm, setEditForm] = useState({
     name: group?.name || '',
     category: group?.category || 'Other',
@@ -207,7 +209,7 @@ export default function GroupDetailScreen({ route, navigation }) {
     const cleanedMembers = editForm.members.map((m) => ({
       ...m,
       name: m.name.trim(),
-      phone: m.phone.trim(),
+      phone: normalizePhoneInput(m.phone),
     }));
 
     if (cleanedMembers.some((m) => !m.name || !m.phone)) {
@@ -230,6 +232,28 @@ export default function GroupDetailScreen({ route, navigation }) {
       ...current,
       members: current.members.map((m) => (m.id === id ? { ...m, ...patch } : m)),
     }));
+  };
+
+  const handlePickEditMemberContact = async (memberId) => {
+    if (pickingContactMemberId) return;
+
+    setPickingContactMemberId(memberId);
+    try {
+      const pickedContact = await pickPhoneContact();
+      if (!pickedContact) {
+        return;
+      }
+
+      updateEditMember(memberId, {
+        name: pickedContact.name,
+        phone: pickedContact.phone,
+      });
+      showToast(`Filled details from ${pickedContact.name || 'contact'}`);
+    } catch (error) {
+      showToast(error?.message || 'Could not open contacts');
+    } finally {
+      setPickingContactMemberId(null);
+    }
   };
 
   const category = categoryMap[group.category] || categoryMap.Other;
@@ -411,6 +435,16 @@ export default function GroupDetailScreen({ route, navigation }) {
                         value={member.name}
                         onChangeText={(text) => updateEditMember(member.id, { name: text })}
                       />
+                      <Pressable
+                        onPress={() => handlePickEditMemberContact(member.id)}
+                        disabled={pickingContactMemberId === member.id}
+                        style={[styles.contactButton, pickingContactMemberId === member.id ? styles.contactButtonDisabled : null]}
+                      >
+                        <Feather name="book-open" size={16} color={colors.textPrimary} />
+                        <Text style={styles.contactButtonText}>
+                          {pickingContactMemberId === member.id ? 'Opening contacts...' : 'Choose From Contacts'}
+                        </Text>
+                      </Pressable>
                       <TextInput
                         placeholder="Phone number"
                         placeholderTextColor={colors.muted}
@@ -418,7 +452,7 @@ export default function GroupDetailScreen({ route, navigation }) {
                         maxLength={10}
                         style={styles.input}
                         value={member.phone}
-                        onChangeText={(text) => updateEditMember(member.id, { phone: text })}
+                        onChangeText={(text) => updateEditMember(member.id, { phone: normalizePhoneInput(text) })}
                       />
                     </View>
                   </View>
@@ -704,6 +738,26 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     color: colors.textPrimary,
     marginBottom: 12,
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 10,
+    backgroundColor: colors.white10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  contactButtonDisabled: {
+    opacity: 0.65,
+  },
+  contactButtonText: {
+    color: colors.textPrimary,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   selectorChip: {
     paddingHorizontal: 14,
