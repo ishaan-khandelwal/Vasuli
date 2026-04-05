@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, gradients } from '../constants/colors';
 import { useApp } from '../context/AppContext';
 
@@ -31,55 +32,69 @@ export default function LoginScreen({ navigation }) {
   return (
     <LinearGradient colors={['#06070D', '#11172C', '#17244A']} style={styles.container}>
       <View style={styles.glowTop} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <View style={styles.shell}>
-          <Text style={styles.brand}>Vasuli</Text>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.copy}>Sign in to open your collections dashboard and continue where you left off.</Text>
+      <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.shell}>
+              <Text style={styles.brand}>Vasuli</Text>
+              <Text style={styles.title}>Welcome back</Text>
+              <Text style={styles.copy}>Sign in to open your collections dashboard and continue where you left off.</Text>
 
-          <View style={styles.form}>
-            {errorMessage ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+              <View style={styles.form}>
+                {errorMessage ? (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
+                <TextInput
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    setErrorMessage('');
+                  }}
+                  placeholder="Email"
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  returnKeyType="next"
+                  style={[styles.input, errorMessage ? styles.inputError : {}]}
+                />
+                <TextInput
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    setErrorMessage('');
+                  }}
+                  placeholder="Password"
+                  placeholderTextColor={colors.muted}
+                  secureTextEntry
+                  textContentType="password"
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  style={[styles.input, errorMessage ? styles.inputError : {}]}
+                />
+
+                <Pressable onPress={handleLogin} disabled={submitting}>
+                  <LinearGradient colors={gradients.primary} style={[styles.primaryButton, submitting && styles.buttonDisabled]}>
+                    <Text style={styles.primaryText}>{submitting ? 'Signing In...' : 'Login'}</Text>
+                  </LinearGradient>
+                </Pressable>
+
+                <Pressable onPress={() => navigation.navigate('Signup')} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryText}>Create a new account</Text>
+                </Pressable>
               </View>
-            ) : null}
-
-            <TextInput
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setErrorMessage('');
-              }}
-              placeholder="Email"
-              placeholderTextColor={colors.muted}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={[styles.input, errorMessage ? styles.inputError : {}]}
-            />
-            <TextInput
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setErrorMessage('');
-              }}
-              placeholder="Password"
-              placeholderTextColor={colors.muted}
-              secureTextEntry
-              style={[styles.input, errorMessage ? styles.inputError : {}]}
-            />
-
-            <Pressable onPress={handleLogin} disabled={submitting}>
-              <LinearGradient colors={gradients.primary} style={[styles.primaryButton, submitting && { opacity: 0.7 }]}>
-                <Text style={styles.primaryText}>{submitting ? 'Signing In...' : 'Login'}</Text>
-              </LinearGradient>
-            </Pressable>
-
-            <Pressable onPress={() => navigation.navigate('Signup')} style={styles.secondaryButton}>
-              <Text style={styles.secondaryText}>Create a new account</Text>
-            </Pressable>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
@@ -92,6 +107,12 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+  content: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 28,
+  },
   glowTop: {
     position: 'absolute',
     top: -60,
@@ -102,9 +123,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(108,99,255,0.18)',
   },
   shell: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
   },
   brand: {
     color: colors.textPrimary,
@@ -162,6 +183,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 6,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   primaryText: {
     color: colors.textPrimary,

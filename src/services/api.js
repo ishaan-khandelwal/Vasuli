@@ -41,7 +41,9 @@ const request = async (path, { method = 'GET', body, token } = {}) => {
     return data;
   } catch (error) {
     if (error.message === 'Network request failed') {
-      throw new Error('Cannot connect to the backend. Please ensure your server is running and your device is on the same network.');
+      throw new Error(
+        `Cannot connect to the backend at ${API_URL}. Check that the backend is running, the phone and server are on the same network, and Android cleartext traffic is enabled for HTTP URLs.`
+      );
     }
     throw error;
   }

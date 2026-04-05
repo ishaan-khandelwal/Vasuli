@@ -32,3 +32,4 @@ check_output.txt
 doctor_output.txt
 
 .vercel
+.gradle/

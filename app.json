@@ -20,6 +20,7 @@
     ],
     "android": {
       "package": "com.vasuli.app",
+      "usesCleartextTraffic": true,
       "blockedPermissions": [
         "android.permission.WRITE_CONTACTS"
       ]

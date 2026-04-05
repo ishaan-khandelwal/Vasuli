@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, gradients } from '../constants/colors';
 import { useApp } from '../context/AppContext';
 
@@ -42,81 +43,100 @@ export default function SignupScreen({ navigation }) {
     <LinearGradient colors={['#05060C', '#10172E', '#192A50']} style={styles.container}>
       <View style={styles.blobA} />
       <View style={styles.blobB} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.brand}>Vasuli</Text>
-          <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.copy}>Create your account to sync group recoveries, reminders, and personal dues with the backend.</Text>
+      <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.shell}>
+              <Text style={styles.brand}>Vasuli</Text>
+              <Text style={styles.title}>Create your account</Text>
+              <Text style={styles.copy}>Create your account to sync group recoveries, reminders, and personal dues with the backend.</Text>
 
-          <View style={styles.form}>
-            {errorMessage ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+              <View style={styles.form}>
+                {errorMessage ? (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
+                <TextInput
+                  value={name}
+                  onChangeText={(text) => {
+                    setName(text);
+                    setErrorMessage('');
+                  }}
+                  placeholder="Full name"
+                  placeholderTextColor={colors.muted}
+                  autoCorrect={false}
+                  textContentType="name"
+                  returnKeyType="next"
+                  style={[styles.input, errorMessage && !name ? styles.inputError : {}]}
+                />
+                <TextInput
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    setErrorMessage('');
+                  }}
+                  placeholder="Email"
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  returnKeyType="next"
+                  style={[styles.input, errorMessage ? styles.inputError : {}]}
+                />
+                <TextInput
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    setErrorMessage('');
+                  }}
+                  placeholder="Password"
+                  placeholderTextColor={colors.muted}
+                  secureTextEntry
+                  textContentType="newPassword"
+                  returnKeyType="next"
+                  style={[styles.input, errorMessage ? styles.inputError : {}]}
+                />
+                <TextInput
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    setErrorMessage('');
+                  }}
+                  placeholder="Confirm password"
+                  placeholderTextColor={colors.muted}
+                  secureTextEntry
+                  textContentType="password"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSignup}
+                  style={[styles.input, errorMessage ? styles.inputError : {}]}
+                />
+
+                <Pressable onPress={handleSignup} disabled={submitting}>
+                  <LinearGradient colors={gradients.primary} style={[styles.primaryButton, submitting && styles.buttonDisabled]}>
+                    <Text style={styles.primaryText}>{submitting ? 'Creating Account...' : 'Sign Up'}</Text>
+                  </LinearGradient>
+                </Pressable>
+
+                <Pressable onPress={() => navigation.goBack()} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryText}>Already have an account</Text>
+                </Pressable>
               </View>
-            ) : null}
 
-            <TextInput
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                setErrorMessage('');
-              }}
-              placeholder="Full name"
-              placeholderTextColor={colors.muted}
-              style={[styles.input, errorMessage && !name ? styles.inputError : {}]}
-            />
-            <TextInput
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setErrorMessage('');
-              }}
-              placeholder="Email"
-              placeholderTextColor={colors.muted}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={[styles.input, errorMessage ? styles.inputError : {}]}
-            />
-            <TextInput
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setErrorMessage('');
-              }}
-              placeholder="Password"
-              placeholderTextColor={colors.muted}
-              secureTextEntry
-              style={[styles.input, errorMessage ? styles.inputError : {}]}
-            />
-            <TextInput
-              value={confirmPassword}
-              onChangeText={(text) => {
-                setConfirmPassword(text);
-                setErrorMessage('');
-              }}
-              placeholder="Confirm password"
-              placeholderTextColor={colors.muted}
-              secureTextEntry
-              style={[styles.input, errorMessage ? styles.inputError : {}]}
-            />
-
-            <Pressable onPress={handleSignup} disabled={submitting}>
-              <LinearGradient colors={gradients.primary} style={[styles.primaryButton, submitting && { opacity: 0.7 }]}>
-                <Text style={styles.primaryText}>{submitting ? 'Creating Account...' : 'Sign Up'}</Text>
-              </LinearGradient>
-            </Pressable>
-
-            <Pressable onPress={() => navigation.goBack()} style={styles.secondaryButton}>
-              <Text style={styles.secondaryText}>Already have an account</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Cloud sync</Text>
-            <Text style={styles.infoText}>Your login and app data can now be stored in MongoDB through the Node.js backend.</Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Cloud sync</Text>
+                <Text style={styles.infoText}>Your login and app data can now be stored in MongoDB through the Node.js backend.</Text>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
@@ -132,8 +152,13 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingHorizontal: 20,
+    paddingVertical: 28,
+  },
+  shell: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
   },
   blobA: {
     position: 'absolute',
@@ -209,6 +234,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   primaryText: {
     color: colors.textPrimary,
