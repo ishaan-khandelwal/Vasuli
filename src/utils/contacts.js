@@ -67,6 +67,14 @@ const getWebPhoneOptions = (contact = {}) => {
     .filter(Boolean);
 };
 
+const isIOSWebBrowser = () => {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') {
+    return false;
+  }
+
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent || '');
+};
+
 export const getContactPhoneOptions = (contact = {}) => {
   const seenPhones = new Set();
 
@@ -99,7 +107,11 @@ const pickWebPhoneContact = async () => {
   const contactPicker = typeof navigator !== 'undefined' ? navigator.contacts?.select : undefined;
 
   if (typeof contactPicker !== 'function') {
-    throw new Error('This browser cannot open contacts. Use the Android app or enter the number manually.');
+    if (isIOSWebBrowser()) {
+      throw new Error('iPhone browsers do not support contact picking here. Use the iOS app or enter the number manually.');
+    }
+
+    throw new Error('This browser cannot open contacts. Use the app or enter the number manually.');
   }
 
   try {
@@ -163,9 +175,11 @@ export const pickPhoneContact = async () => {
     throw new Error('Contacts are not available on this device.');
   }
 
-  const permission = await Contacts.requestPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error('Allow contacts access to pick a phone number.');
+  if (Platform.OS === 'android') {
+    const permission = await Contacts.requestPermissionsAsync();
+    if (!permission.granted) {
+      throw new Error('Allow contacts access to pick a phone number.');
+    }
   }
 
   const selectedContact = await Contacts.presentContactPickerAsync();
