@@ -33,6 +33,40 @@ const getPhoneLabel = (label, index) => {
   return normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1);
 };
 
+const getWebContactName = (contact = {}) => {
+  if (Array.isArray(contact.name)) {
+    return `${contact.name.find(Boolean) || ''}`.trim();
+  }
+
+  return `${contact.name || ''}`.trim();
+};
+
+const getWebPhoneOptions = (contact = {}) => {
+  const phones = Array.isArray(contact.tel) ? contact.tel : [contact.tel];
+  const seenPhones = new Set();
+
+  return phones
+    .map((entry, index) => {
+      const displayPhone = `${entry || ''}`.trim();
+      const phone = normalizePhoneInput(displayPhone);
+
+      if (!phone || seenPhones.has(phone)) {
+        return null;
+      }
+
+      seenPhones.add(phone);
+
+      return {
+        id: `web-contact-${index}-${phone}`,
+        label: phones.length > 1 ? `Number ${index + 1}` : 'Phone',
+        phone,
+        displayPhone: displayPhone || phone,
+        isPrimary: index === 0,
+      };
+    })
+    .filter(Boolean);
+};
+
 export const getContactPhoneOptions = (contact = {}) => {
   const seenPhones = new Set();
 
@@ -61,6 +95,51 @@ const getContactPhone = (contact = {}) => {
   return getContactPhoneOptions(contact)[0]?.phone || '';
 };
 
+const pickWebPhoneContact = async () => {
+  const contactPicker = typeof navigator !== 'undefined' ? navigator.contacts?.select : undefined;
+
+  if (typeof contactPicker !== 'function') {
+    throw new Error('This browser cannot open contacts. Use the Android app or enter the number manually.');
+  }
+
+  try {
+    const selectedContacts = await contactPicker.call(navigator.contacts, ['name', 'tel'], { multiple: false });
+    const selectedContact = selectedContacts?.[0];
+
+    if (!selectedContact) {
+      return null;
+    }
+
+    const name = getWebContactName(selectedContact);
+    const phoneOptions = getWebPhoneOptions(selectedContact);
+    const phone = phoneOptions[0]?.phone || '';
+
+    if (!phone) {
+      throw new Error(`${name || 'This contact'} has no phone number.`);
+    }
+
+    return {
+      name,
+      phone,
+      phoneOptions,
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return null;
+    }
+
+    if (error?.name === 'NotAllowedError') {
+      throw new Error('Allow contact access to pick a phone number.');
+    }
+
+    if (error?.name === 'SecurityError') {
+      throw new Error('Browser contact access needs a secure HTTPS site.');
+    }
+
+    throw error;
+  }
+};
+
 const getCompleteContact = async (contact) => {
   if (!contact?.id || getContactPhone(contact)) {
     return contact;
@@ -76,7 +155,7 @@ const getCompleteContact = async (contact) => {
 
 export const pickPhoneContact = async () => {
   if (Platform.OS === 'web') {
-    throw new Error('Contacts are available only on the mobile app.');
+    return pickWebPhoneContact();
   }
 
   const available = await Contacts.isAvailableAsync();
