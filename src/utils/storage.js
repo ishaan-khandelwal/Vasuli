@@ -77,6 +77,9 @@ export const defaultProfile = {
   name: 'You',
   defaultCountryCode: '91',
   messageTemplate: defaultMessage,
+  autoRemindersEnabled: false,
+  autoReminderIntervalDays: 1,
+  autoReminderTime: '09:00',
 };
 
 export const defaultAuthSession = {

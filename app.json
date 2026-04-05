@@ -31,6 +31,12 @@
     "plugins": [
       "@react-native-community/datetimepicker",
       [
+        "expo-notifications",
+        {
+          "defaultChannel": "vasuli-auto-reminders"
+        }
+      ],
+      [
         "expo-contacts",
         {
           "contactsPermission": "Allow Vasuli to access your contacts so you can fill phone numbers faster."

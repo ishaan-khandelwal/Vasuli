@@ -4,6 +4,9 @@ const createDefaultProfile = (name = 'You') => ({
   name: name || 'You',
   defaultCountryCode: '91',
   messageTemplate: defaultMessage,
+  autoRemindersEnabled: false,
+  autoReminderIntervalDays: 1,
+  autoReminderTime: '09:00',
 });
 
 const createDefaultAppData = (name = 'You') => ({

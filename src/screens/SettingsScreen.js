@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -7,6 +7,7 @@ import { colors, gradients } from '../constants/colors';
 import GlassCard from '../components/GlassCard';
 import { buildReminderMessage } from '../utils/whatsapp';
 import { formatCurrency } from '../utils/formatters';
+import { normalizeReminderTime } from '../utils/notifications';
 
 export default function SettingsScreen() {
   const { profile, authUser, updateUserProfile, resetApp, signOut } = useApp();
@@ -36,8 +37,10 @@ export default function SettingsScreen() {
     await updateUserProfile({
       ...draft,
       defaultCountryCode: draft.defaultCountryCode || '91',
+      autoReminderIntervalDays: Math.min(30, Math.max(1, Number.parseInt(draft.autoReminderIntervalDays || '1', 10) || 1)),
+      autoReminderTime: normalizeReminderTime(draft.autoReminderTime),
     });
-    showToast('Settings saved');
+    showToast(draft.autoRemindersEnabled ? 'Settings saved. Allow notifications if prompted.' : 'Settings saved');
   };
 
   const openConfirm = (type) => {
@@ -114,6 +117,53 @@ export default function SettingsScreen() {
             <Text style={styles.preview}>{preview}</Text>
           </GlassCard>
 
+          <GlassCard style={styles.card}>
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={styles.label}>Smart Auto Reminders</Text>
+                <Text style={styles.helperText}>
+                  Vasuli will send a notification on your chosen schedule so you can open the app and send reminders quickly.
+                </Text>
+              </View>
+              <Switch
+                value={Boolean(draft.autoRemindersEnabled)}
+                onValueChange={(value) => setDraft((current) => ({ ...current, autoRemindersEnabled: value }))}
+                trackColor={{ true: colors.primaryStart, false: colors.white10 }}
+              />
+            </View>
+            <Text style={styles.label}>Reminder Every</Text>
+            <View style={styles.inlineRow}>
+              <TextInput
+                value={`${draft.autoReminderIntervalDays ?? 1}`}
+                onChangeText={(text) =>
+                  setDraft((current) => ({
+                    ...current,
+                    autoReminderIntervalDays: text.replace(/[^\d]/g, ''),
+                  }))
+                }
+                style={[styles.input, styles.inlineInput]}
+                placeholder="1"
+                placeholderTextColor={colors.muted}
+                keyboardType="number-pad"
+              />
+              <Text style={styles.inlineSuffix}>day(s)</Text>
+            </View>
+            <Text style={styles.label}>Reminder Time</Text>
+            <TextInput
+              value={draft.autoReminderTime}
+              onChangeText={(text) =>
+                setDraft((current) => ({
+                  ...current,
+                  autoReminderTime: text.replace(/[^\d:]/g, '').slice(0, 5),
+                }))
+              }
+              style={styles.input}
+              placeholder="09:00"
+              placeholderTextColor={colors.muted}
+            />
+            <Text style={styles.helperText}>Use 24-hour format like `09:00` or `21:30`.</Text>
+          </GlassCard>
+
           <Pressable onPress={save}>
             <LinearGradient colors={gradients.primary} style={styles.saveButton}>
               <Text style={styles.saveText}>Save Settings</Text>
@@ -188,6 +238,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 6,
   },
+  helperText: {
+    color: colors.textSecondary,
+    lineHeight: 21,
+    marginBottom: 8,
+  },
   accountLabel: {
     color: colors.textSecondary,
     fontSize: 12,
@@ -211,6 +266,30 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     color: colors.textPrimary,
     marginBottom: 10,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 12,
+  },
+  switchCopy: {
+    flex: 1,
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inlineInput: {
+    flex: 0,
+    width: 86,
+    marginBottom: 0,
+    marginRight: 10,
+  },
+  inlineSuffix: {
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   textarea: {
     minHeight: 160,

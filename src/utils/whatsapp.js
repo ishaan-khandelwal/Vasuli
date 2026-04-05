@@ -1,6 +1,14 @@
 import * as Linking from 'expo-linking';
 import { sanitizePhone } from './formatters';
 
+const stripEmoji = (value = '') =>
+  `${value}`
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')
+    .replace(/[\uFE0F\u200D]/gu, '')
+    .replace(/[^\S\r\n]{2,}/g, ' ')
+    .trim();
+
 const applyTemplate = (
   template,
   {
@@ -11,12 +19,14 @@ const applyTemplate = (
     organizerName = '',
   }
 ) =>
-  template
-    .replace(/\[Name\]/g, name)
-    .replace(/\[Amount\]/g, amount)
-    .replace(/\[GroupName\]/g, groupName)
-    .replace(/\[Category\]/g, category)
-    .replace(/\[OrganizerName\]/g, organizerName);
+  stripEmoji(
+    template
+      .replace(/\[Name\]/g, name)
+      .replace(/\[Amount\]/g, amount)
+      .replace(/\[GroupName\]/g, groupName)
+      .replace(/\[Category\]/g, category)
+      .replace(/\[OrganizerName\]/g, organizerName)
+  );
 
 export const buildReminderMessage = ({
   template,

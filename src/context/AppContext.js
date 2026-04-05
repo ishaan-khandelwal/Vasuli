@@ -25,6 +25,7 @@ import {
   syncPersonalLoans as syncPersonalLoansRequest,
   syncProfile as syncProfileRequest,
 } from '../services/api';
+import { normalizeReminderSettings, syncAutoReminderNotifications } from '../utils/notifications';
 
 const AppContext = createContext(null);
 
@@ -40,6 +41,7 @@ const normalizeProfile = (profile, fallbackName = 'You') => ({
   name: profile?.name?.trim() || fallbackName || 'You',
   defaultCountryCode: `${profile?.defaultCountryCode || '91'}`.replace(/[^\d]/g, '') || '91',
   messageTemplate: profile?.messageTemplate || defaultProfile.messageTemplate,
+  ...normalizeReminderSettings(profile),
 });
 
 const normalizeAppSnapshot = (snapshot, fallbackName) => ({
@@ -118,6 +120,20 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     loadApp();
   }, []);
+
+  useEffect(() => {
+    if (!profile) {
+      return;
+    }
+
+    syncAutoReminderNotifications({
+      profile,
+      groups,
+      personalLoans,
+    }).catch((error) => {
+      console.warn('Failed to sync auto reminder notifications.', error);
+    });
+  }, [profile, groups, personalLoans]);
 
   const applyAuthResponse = async ({ token, user, appData }) => {
     const session = { isAuthenticated: true, token };
