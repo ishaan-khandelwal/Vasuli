@@ -21,12 +21,44 @@ const getContactName = (contact = {}) => {
   return fallbackName;
 };
 
-const getContactPhone = (contact = {}) => {
-  const selectedPhone = contact.phoneNumbers
-    ?.map((entry) => normalizePhoneInput(entry?.number || ''))
-    .find(Boolean);
+const getPhoneLabel = (label, index) => {
+  const normalizedLabel = `${label || ''}`
+    .replace(/_/g, ' ')
+    .trim();
 
-  return selectedPhone || '';
+  if (!normalizedLabel) {
+    return `Number ${index + 1}`;
+  }
+
+  return normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1);
+};
+
+export const getContactPhoneOptions = (contact = {}) => {
+  const seenPhones = new Set();
+
+  return (contact.phoneNumbers || [])
+    .map((entry, index) => {
+      const phone = normalizePhoneInput(entry?.number || '');
+      if (!phone || seenPhones.has(phone)) {
+        return null;
+      }
+
+      seenPhones.add(phone);
+
+      return {
+        id: entry?.id || `${contact.id || 'contact'}-${index}-${phone}`,
+        label: getPhoneLabel(entry?.label, index),
+        phone,
+        displayPhone: `${entry?.number || ''}`.trim() || phone,
+        isPrimary: Boolean(entry?.isPrimary),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary));
+};
+
+const getContactPhone = (contact = {}) => {
+  return getContactPhoneOptions(contact)[0]?.phone || '';
 };
 
 const getCompleteContact = async (contact) => {
@@ -52,11 +84,9 @@ export const pickPhoneContact = async () => {
     throw new Error('Contacts are not available on this device.');
   }
 
-  if (Platform.OS === 'android') {
-    const permission = await Contacts.requestPermissionsAsync();
-    if (!permission.granted) {
-      throw new Error('Allow contacts access to pick a phone number.');
-    }
+  const permission = await Contacts.requestPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error('Allow contacts access to pick a phone number.');
   }
 
   const selectedContact = await Contacts.presentContactPickerAsync();
@@ -65,7 +95,8 @@ export const pickPhoneContact = async () => {
   }
 
   const contact = await getCompleteContact(selectedContact);
-  const phone = getContactPhone(contact);
+  const phoneOptions = getContactPhoneOptions(contact);
+  const phone = phoneOptions[0]?.phone || '';
 
   if (!phone) {
     throw new Error(`${getContactName(contact) || 'This contact'} has no phone number.`);
@@ -74,5 +105,6 @@ export const pickPhoneContact = async () => {
   return {
     name: getContactName(contact),
     phone,
+    phoneOptions,
   };
 };

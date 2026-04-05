@@ -30,6 +30,7 @@ import ExpenseCard from '../components/ExpenseCard';
 import MemberCard from '../components/MemberCard';
 import DebtorCard from '../components/DebtorCard';
 import BalanceSummary from '../components/BalanceSummary';
+import ContactPhonePickerModal from '../components/ContactPhonePickerModal';
 
 const tabs = ['Expenses', 'Balances', 'Vasuli'];
 
@@ -42,6 +43,7 @@ export default function GroupDetailScreen({ route, navigation }) {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [pickingContactMemberId, setPickingContactMemberId] = useState(null);
+  const [pendingEditMemberContact, setPendingEditMemberContact] = useState(null);
   const [editForm, setEditForm] = useState({
     name: group?.name || '',
     category: group?.category || 'Other',
@@ -234,6 +236,17 @@ export default function GroupDetailScreen({ route, navigation }) {
     }));
   };
 
+  const applyPickedEditMemberContact = (memberId, pickedContact, phone) => {
+    const patch = { phone };
+
+    if (pickedContact?.name) {
+      patch.name = pickedContact.name;
+    }
+
+    updateEditMember(memberId, patch);
+    showToast(`Filled details from ${pickedContact?.name || 'contact'}`);
+  };
+
   const handlePickEditMemberContact = async (memberId) => {
     if (pickingContactMemberId) return;
 
@@ -244,11 +257,15 @@ export default function GroupDetailScreen({ route, navigation }) {
         return;
       }
 
-      updateEditMember(memberId, {
-        name: pickedContact.name,
-        phone: pickedContact.phone,
-      });
-      showToast(`Filled details from ${pickedContact.name || 'contact'}`);
+      if ((pickedContact.phoneOptions?.length || 0) > 1) {
+        setPendingEditMemberContact({
+          memberId,
+          contact: pickedContact,
+        });
+        return;
+      }
+
+      applyPickedEditMemberContact(memberId, pickedContact, pickedContact.phone);
     } catch (error) {
       showToast(error?.message || 'Could not open contacts');
     } finally {
@@ -562,6 +579,24 @@ export default function GroupDetailScreen({ route, navigation }) {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+      <ContactPhonePickerModal
+        visible={Boolean(pendingEditMemberContact)}
+        contactName={pendingEditMemberContact?.contact?.name}
+        phoneOptions={pendingEditMemberContact?.contact?.phoneOptions}
+        onClose={() => setPendingEditMemberContact(null)}
+        onSelect={(option) => {
+          if (!pendingEditMemberContact) {
+            return;
+          }
+
+          applyPickedEditMemberContact(
+            pendingEditMemberContact.memberId,
+            pendingEditMemberContact.contact,
+            option.phone
+          );
+          setPendingEditMemberContact(null);
+        }}
+      />
     </LinearGradient>
   );
 }

@@ -23,6 +23,7 @@ import { copyText } from '../utils/native';
 import { confirmAction } from '../utils/confirm';
 import { pickPhoneContact } from '../utils/contacts';
 import GlassCard from '../components/GlassCard';
+import ContactPhonePickerModal from '../components/ContactPhonePickerModal';
 
 const loanStatusMap = {
   pending: { label: 'Pending', style: 'pending' },
@@ -36,6 +37,7 @@ export default function PersonalLoansScreen() {
   const [showModal, setShowModal] = useState(false);
   const [editingLoanId, setEditingLoanId] = useState(null);
   const [pickingContact, setPickingContact] = useState(false);
+  const [pendingContact, setPendingContact] = useState(null);
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -66,6 +68,15 @@ export default function PersonalLoansScreen() {
   const openCreateModal = () => {
     resetForm();
     setShowModal(true);
+  };
+
+  const applyPickedContact = (pickedContact, phone) => {
+    setForm((current) => ({
+      ...current,
+      name: pickedContact?.name || current.name,
+      phone,
+    }));
+    showToast(`Filled details from ${pickedContact?.name || 'contact'}`);
   };
 
   const handleSave = async () => {
@@ -167,12 +178,12 @@ export default function PersonalLoansScreen() {
         return;
       }
 
-      setForm((current) => ({
-        ...current,
-        name: pickedContact.name || current.name,
-        phone: pickedContact.phone,
-      }));
-      showToast(`Filled details from ${pickedContact.name || 'contact'}`);
+      if ((pickedContact.phoneOptions?.length || 0) > 1) {
+        setPendingContact(pickedContact);
+        return;
+      }
+
+      applyPickedContact(pickedContact, pickedContact.phone);
     } catch (error) {
       showToast(error?.message || 'Could not open contacts');
     } finally {
@@ -382,6 +393,16 @@ export default function PersonalLoansScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+      <ContactPhonePickerModal
+        visible={Boolean(pendingContact)}
+        contactName={pendingContact?.name}
+        phoneOptions={pendingContact?.phoneOptions}
+        onClose={() => setPendingContact(null)}
+        onSelect={(option) => {
+          applyPickedContact(pendingContact, option.phone);
+          setPendingContact(null);
+        }}
+      />
     </LinearGradient>
   );
 }

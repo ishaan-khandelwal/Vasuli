@@ -22,6 +22,7 @@ import { colors, gradients } from '../constants/colors';
 import { categories } from '../constants/categories';
 import CategoryChip from '../components/CategoryChip';
 import GlassCard from '../components/GlassCard';
+import ContactPhonePickerModal from '../components/ContactPhonePickerModal';
 import { createLocalId } from '../utils/storage';
 import { normalizePhoneInput } from '../utils/formatters';
 import { runHapticSuccess } from '../utils/native';
@@ -46,6 +47,7 @@ export default function CreateGroupScreen() {
   ]);
   const [showPicker, setShowPicker] = useState(false);
   const [pickingContactMemberId, setPickingContactMemberId] = useState(null);
+  const [pendingMemberContact, setPendingMemberContact] = useState(null);
 
   const scrollToFocusedField = () => {
     requestAnimationFrame(() => {
@@ -110,6 +112,21 @@ export default function CreateGroupScreen() {
     setMembers((current) => current.filter((member) => member.id !== memberId));
   };
 
+  const applyPickedMemberContact = (memberId, pickedContact, phone) => {
+    const patch = { phone };
+
+    if (pickedContact?.name) {
+      patch.name = pickedContact.name;
+    }
+
+    updateMember(memberId, patch);
+    showToast(`Filled details from ${pickedContact?.name || 'contact'}`);
+  };
+
+  const closePendingMemberContact = () => {
+    setPendingMemberContact(null);
+  };
+
   const handlePickMemberContact = async (memberId) => {
     if (pickingContactMemberId) return;
 
@@ -120,11 +137,15 @@ export default function CreateGroupScreen() {
         return;
       }
 
-      updateMember(memberId, {
-        name: pickedContact.name,
-        phone: pickedContact.phone,
-      });
-      showToast(`Filled details from ${pickedContact.name || 'contact'}`);
+      if ((pickedContact.phoneOptions?.length || 0) > 1) {
+        setPendingMemberContact({
+          memberId,
+          contact: pickedContact,
+        });
+        return;
+      }
+
+      applyPickedMemberContact(memberId, pickedContact, pickedContact.phone);
     } catch (error) {
       showToast(error?.message || 'Could not open contacts');
     } finally {
@@ -321,6 +342,20 @@ export default function CreateGroupScreen() {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+      <ContactPhonePickerModal
+        visible={Boolean(pendingMemberContact)}
+        contactName={pendingMemberContact?.contact?.name}
+        phoneOptions={pendingMemberContact?.contact?.phoneOptions}
+        onClose={closePendingMemberContact}
+        onSelect={(option) => {
+          if (!pendingMemberContact) {
+            return;
+          }
+
+          applyPickedMemberContact(pendingMemberContact.memberId, pendingMemberContact.contact, option.phone);
+          closePendingMemberContact();
+        }}
+      />
     </LinearGradient>
   );
 }
