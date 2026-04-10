@@ -1,8 +1,27 @@
 const round = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
-export const calculateMemberBalances = (group) => {
+const getPaidSettlementAdjustments = (group) => {
+  const adjustments = {};
+
+  group.members.forEach((member) => {
+    adjustments[member.id] = 0;
+  });
+
+  (group.settlements || []).forEach((settlement) => {
+    if (settlement.status !== 'paid') return;
+    const amount = Number(settlement.amount) || 0;
+    adjustments[settlement.debtorId] = round((adjustments[settlement.debtorId] || 0) + amount);
+    adjustments[settlement.creditorId] = round((adjustments[settlement.creditorId] || 0) - amount);
+  });
+
+  return adjustments;
+};
+
+export const calculateMemberBalances = (group, options = {}) => {
+  const { includePaidSettlements = false } = options;
   const paidMap = {};
   const shareMap = {};
+  const settlementAdjustments = includePaidSettlements ? getPaidSettlementAdjustments(group) : {};
 
   group.members.forEach((member) => {
     paidMap[member.id] = 0;
@@ -22,7 +41,7 @@ export const calculateMemberBalances = (group) => {
   return group.members.map((member) => {
     const paid = round(paidMap[member.id] || 0);
     const share = round(shareMap[member.id] || 0);
-    const net = round(paid - share);
+    const net = round(paid - share + (settlementAdjustments[member.id] || 0));
     return { ...member, paid, share, net };
   });
 };
@@ -83,7 +102,7 @@ export const mergeSettlementsWithSuggestions = (group) => {
 };
 
 export const summarizeGroup = (group) => {
-  const balances = calculateMemberBalances(group);
+  const balances = calculateMemberBalances(group, { includePaidSettlements: true });
   const settlements = mergeSettlementsWithSuggestions(group);
   const totalExpense = group.expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   const pendingAmount = settlements

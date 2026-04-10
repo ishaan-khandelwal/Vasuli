@@ -3,6 +3,7 @@
     "name": "Vasuli",
     "slug": "vasuli",
     "version": "1.0.0",
+    "icon": "./assets/images/icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0F0F1A",
@@ -20,6 +21,10 @@
     ],
     "android": {
       "package": "com.vasuli.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0F0F1A"
+      },
       "usesCleartextTraffic": true,
       "blockedPermissions": [
         "android.permission.WRITE_CONTACTS"
@@ -27,6 +32,9 @@
     },
     "ios": {
       "bundleIdentifier": "com.vasuli.app"
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "@react-native-community/datetimepicker",

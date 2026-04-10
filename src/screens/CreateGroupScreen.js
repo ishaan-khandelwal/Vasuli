@@ -16,6 +16,7 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
@@ -211,137 +212,144 @@ export default function CreateGroupScreen() {
 
   return (
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.content}
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
-          keyboardShouldPersistTaps="always"
-          showsVerticalScrollIndicator={false}
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+          style={styles.safeArea}
         >
-          <Text style={styles.title}>New Group</Text>
-          <Text style={styles.subtitle}>Bring people in, then let Vasuli handle the math.</Text>
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.content}
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
+            keyboardShouldPersistTaps="always"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.headerRow}>
+              <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+                <Feather name="chevron-left" size={20} color={colors.textPrimary} />
+              </Pressable>
+            </View>
+            <Text style={styles.title}>New Group</Text>
+            <Text style={styles.subtitle}>Bring people in, then let Vasuli handle the math.</Text>
 
-          <GlassCard style={styles.section}>
-            <Text style={styles.label}>Group Name</Text>
-            <TextInput
-              ref={groupNameRef}
-              placeholder="Goa Trip"
-              placeholderTextColor={colors.muted}
-              value={name}
-              onChangeText={setName}
-              onSubmitEditing={() => descriptionRef.current?.focus()}
-              returnKeyType="next"
-              style={styles.input}
-            />
-            <Text style={styles.label}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              {categories.map((item) => (
-                <CategoryChip key={item.key} item={item} selected={item.key === category} onPress={() => setCategory(item.key)} />
-              ))}
-            </ScrollView>
-            <Text style={styles.label}>Date</Text>
-            <Pressable style={styles.input} onPress={openDatePicker}>
-              <Text style={styles.inputText}>{date.toDateString()}</Text>
-            </Pressable>
-            {showPicker && Platform.OS === 'ios' ? (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="spinner"
-                onChange={handleDateChange}
-              />
-            ) : null}
-            <Text style={styles.label}>{category === 'Other' ? 'What is this for?' : 'Description'}</Text>
-            <TextInput
-              ref={descriptionRef}
-              placeholder={category === 'Other' ? 'Explain what this group is for' : 'What is this group for?'}
-              placeholderTextColor={colors.muted}
-              value={description}
-              onChangeText={setDescription}
-              onFocus={scrollToFocusedField}
-              returnKeyType="done"
-              style={[styles.input, styles.textarea]}
-              multiline
-            />
-          </GlassCard>
-
-          <Text style={styles.sectionTitle}>Members</Text>
-          {members.map((member, index) => (
-            <GlassCard key={member.id} style={styles.memberCard}>
-              <View style={styles.memberTop}>
-                <Text style={styles.memberIndex}>Member {index + 1}</Text>
-                {members.length > 2 ? (
-                  <Pressable onPress={() => removeMember(member.id)}>
-                    <Feather name="trash-2" size={18} color={colors.danger} />
-                  </Pressable>
-                ) : null}
-              </View>
+            <GlassCard style={styles.section}>
+              <Text style={styles.label}>Group Name</Text>
               <TextInput
-                ref={(ref) => {
-                  memberNameRefs.current[member.id] = ref;
-                }}
-                placeholder="Name"
+                ref={groupNameRef}
+                placeholder="Goa Trip"
                 placeholderTextColor={colors.muted}
-                value={member.name}
-                onChangeText={(text) => updateMember(member.id, { name: text })}
-                onFocus={scrollToFocusedField}
-                onSubmitEditing={() => focusNextMemberField(index, 'name')}
+                value={name}
+                onChangeText={setName}
+                onSubmitEditing={() => descriptionRef.current?.focus()}
                 returnKeyType="next"
                 style={styles.input}
               />
-              <Pressable
-                onPress={() => handlePickMemberContact(member.id)}
-                disabled={pickingContactMemberId === member.id}
-                style={[styles.contactButton, pickingContactMemberId === member.id ? styles.contactButtonDisabled : null]}
-              >
-                <Feather name="book-open" size={16} color={colors.textPrimary} />
-                <Text style={styles.contactButtonText}>
-                  {pickingContactMemberId === member.id ? 'Opening contacts...' : 'Choose From Contacts'}
-                </Text>
+              <Text style={styles.label}>Category</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                {categories.map((item) => (
+                  <CategoryChip key={item.key} item={item} selected={item.key === category} onPress={() => setCategory(item.key)} />
+                ))}
+              </ScrollView>
+              <Text style={styles.label}>Date</Text>
+              <Pressable style={styles.input} onPress={openDatePicker}>
+                <Text style={styles.inputText}>{date.toDateString()}</Text>
               </Pressable>
-              <TextInput
-                ref={(ref) => {
-                  memberPhoneRefs.current[member.id] = ref;
-                }}
-                placeholder="Phone number"
-                placeholderTextColor={colors.muted}
-                keyboardType="phone-pad"
-                value={member.phone}
-                onChangeText={(text) => updateMember(member.id, { phone: normalizePhoneInput(text) })}
-                maxLength={10}
-                onFocus={scrollToFocusedField}
-                onSubmitEditing={() => focusNextMemberField(index, 'phone')}
-                returnKeyType={index === members.length - 1 ? 'done' : 'next'}
-                style={styles.input}
-              />
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Mark as you / organizer</Text>
-                <Switch
-                  value={member.isOrganizer}
-                  onValueChange={(value) => updateMember(member.id, { isOrganizer: value })}
-                  trackColor={{ true: colors.primaryStart, false: colors.white10 }}
+              {showPicker && Platform.OS === 'ios' ? (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
                 />
-              </View>
+              ) : null}
+              <Text style={styles.label}>{category === 'Other' ? 'What is this for?' : 'Description'}</Text>
+              <TextInput
+                ref={descriptionRef}
+                placeholder={category === 'Other' ? 'Explain what this group is for' : 'What is this group for?'}
+                placeholderTextColor={colors.muted}
+                value={description}
+                onChangeText={setDescription}
+                onFocus={scrollToFocusedField}
+                returnKeyType="done"
+                style={[styles.input, styles.textarea]}
+                multiline
+              />
             </GlassCard>
-          ))}
 
-          <Pressable style={styles.addMemberButton} onPress={addMember}>
-            <Feather name="plus-circle" size={18} color={colors.textPrimary} />
-            <Text style={styles.addMemberText}>Add Members</Text>
-          </Pressable>
+            <Text style={styles.sectionTitle}>Members</Text>
+            {members.map((member, index) => (
+              <GlassCard key={member.id} style={styles.memberCard}>
+                <View style={styles.memberTop}>
+                  <Text style={styles.memberIndex}>Member {index + 1}</Text>
+                  {members.length > 2 ? (
+                    <Pressable onPress={() => removeMember(member.id)}>
+                      <Feather name="trash-2" size={18} color={colors.danger} />
+                    </Pressable>
+                  ) : null}
+                </View>
+                <TextInput
+                  ref={(ref) => {
+                    memberNameRefs.current[member.id] = ref;
+                  }}
+                  placeholder="Name"
+                  placeholderTextColor={colors.muted}
+                  value={member.name}
+                  onChangeText={(text) => updateMember(member.id, { name: text })}
+                  onFocus={scrollToFocusedField}
+                  onSubmitEditing={() => focusNextMemberField(index, 'name')}
+                  returnKeyType="next"
+                  style={styles.input}
+                />
+                <Pressable
+                  onPress={() => handlePickMemberContact(member.id)}
+                  disabled={pickingContactMemberId === member.id}
+                  style={[styles.contactButton, pickingContactMemberId === member.id ? styles.contactButtonDisabled : null]}
+                >
+                  <Feather name="book-open" size={16} color={colors.textPrimary} />
+                  <Text style={styles.contactButtonText}>
+                    {pickingContactMemberId === member.id ? 'Opening contacts...' : 'Choose From Contacts'}
+                  </Text>
+                </Pressable>
+                <TextInput
+                  ref={(ref) => {
+                    memberPhoneRefs.current[member.id] = ref;
+                  }}
+                  placeholder="Phone number"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="phone-pad"
+                  value={member.phone}
+                  onChangeText={(text) => updateMember(member.id, { phone: normalizePhoneInput(text) })}
+                  maxLength={10}
+                  onFocus={scrollToFocusedField}
+                  onSubmitEditing={() => focusNextMemberField(index, 'phone')}
+                  returnKeyType={index === members.length - 1 ? 'done' : 'next'}
+                  style={styles.input}
+                />
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>Mark as you / organizer</Text>
+                  <Switch
+                    value={member.isOrganizer}
+                    onValueChange={(value) => updateMember(member.id, { isOrganizer: value })}
+                    trackColor={{ true: colors.primaryStart, false: colors.white10 }}
+                  />
+                </View>
+              </GlassCard>
+            ))}
 
-          <Pressable onPress={handleCreate}>
-            <LinearGradient colors={gradients.primary} style={styles.createButton}>
-              <Text style={styles.createText}>Create Group</Text>
-            </LinearGradient>
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            <Pressable style={styles.addMemberButton} onPress={addMember}>
+              <Feather name="plus-circle" size={18} color={colors.textPrimary} />
+              <Text style={styles.addMemberText}>Add Members</Text>
+            </Pressable>
+
+            <Pressable onPress={handleCreate}>
+              <LinearGradient colors={gradients.primary} style={styles.createButton}>
+                <Text style={styles.createText}>Create Group</Text>
+              </LinearGradient>
+            </Pressable>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
       <ContactPhonePickerModal
         visible={Boolean(pendingMemberContact)}
         contactName={pendingMemberContact?.contact?.name}
@@ -362,10 +370,28 @@ export default function CreateGroupScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  safeArea: { flex: 1 },
   content: {
-    paddingTop: 68,
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
+    paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 40,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    marginBottom: 14,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white10,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   title: {
     color: colors.textPrimary,

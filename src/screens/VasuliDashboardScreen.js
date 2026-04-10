@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
@@ -141,77 +142,87 @@ export default function VasuliDashboardScreen() {
 
   return (
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl tintColor={colors.textPrimary} refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>Vasuli Dashboard</Text>
-        <Text style={styles.subtitle}>Global recovery view across every group.</Text>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={<RefreshControl tintColor={colors.textPrimary} refreshing={refreshing} onRefresh={onRefresh} />}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.title}>Vasuli Dashboard</Text>
+          <Text style={styles.subtitle}>Global recovery view across every group.</Text>
 
-        <View style={styles.statsRow}>
-          <GlassCard style={styles.stat}>
-            <Text style={styles.statLabel}>To recover</Text>
-            <Text style={styles.statValue}>{formatCurrency(global.totalPending)}</Text>
+          <View style={styles.statsRow}>
+            <GlassCard style={styles.stat}>
+              <Text style={styles.statLabel}>To recover</Text>
+              <Text style={styles.statValue}>{formatCurrency(global.totalPending)}</Text>
+            </GlassCard>
+            <GlassCard style={styles.stat}>
+              <Text style={styles.statLabel}>Settled</Text>
+              <Text style={styles.statValue}>{formatCurrency(global.totalSettled)}</Text>
+            </GlassCard>
+          </View>
+          <GlassCard style={styles.statWide}>
+            <Text style={styles.statLabel}>Pending reminders</Text>
+            <Text style={styles.statValue}>{global.pendingReminders}</Text>
           </GlassCard>
-          <GlassCard style={styles.stat}>
-            <Text style={styles.statLabel}>Settled</Text>
-            <Text style={styles.statValue}>{formatCurrency(global.totalSettled)}</Text>
-          </GlassCard>
-        </View>
-        <GlassCard style={styles.statWide}>
-          <Text style={styles.statLabel}>Pending reminders</Text>
-          <Text style={styles.statValue}>{global.pendingReminders}</Text>
-        </GlassCard>
 
-        <TextInput
-          placeholder="Search person or group"
-          placeholderTextColor={colors.muted}
-          value={query}
-          onChangeText={setQuery}
-          style={styles.search}
-        />
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          {filters.map((item) => (
-            <Pressable key={item} onPress={() => setFilter(item)} style={[styles.filter, filter === item && styles.filterActive]}>
-              <Text style={styles.filterText}>{item}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          {sorts.map((item) => (
-            <Pressable key={item} onPress={() => setSortBy(item)} style={[styles.filter, sortBy === item && styles.filterActive]}>
-              <Text style={styles.filterText}>Sort: {item}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {filtered.map((item) => (
-          <DebtorCard
-            key={`${item.groupId}-${item.debtorId}-${item.creditorId}`}
-            debtor={item}
-            creditor={item.creditor}
-            groupName={item.groupName}
-            onWhatsApp={() => sendReminder(item)}
-            onMarkPaid={() => markPaid(item)}
-            onCopy={() => copyMessage(item)}
+          <TextInput
+            placeholder="Search person or group"
+            placeholderTextColor={colors.muted}
+            value={query}
+            onChangeText={setQuery}
+            style={styles.search}
           />
-        ))}
-      </ScrollView>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+            {filters.map((item) => (
+              <Pressable key={item} onPress={() => setFilter(item)} style={[styles.filter, filter === item && styles.filterActive]}>
+                <Text style={styles.filterText}>{item}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+            {sorts.map((item) => (
+              <Pressable key={item} onPress={() => setSortBy(item)} style={[styles.filter, sortBy === item && styles.filterActive]}>
+                <Text style={styles.filterText}>Sort: {item}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {filtered.length ? (
+            filtered.map((item) => (
+              <DebtorCard
+                key={`${item.groupId}-${item.debtorId}-${item.creditorId}`}
+                debtor={item}
+                creditor={item.creditor}
+                groupName={item.groupName}
+                onWhatsApp={() => sendReminder(item)}
+                onMarkPaid={() => markPaid(item)}
+                onCopy={() => copyMessage(item)}
+              />
+            ))
+          ) : (
+            <GlassCard>
+              <Text style={styles.emptyTitle}>No matching dues.</Text>
+              <Text style={styles.emptyText}>Try another filter or search term.</Text>
+            </GlassCard>
+          )}
+        </ScrollView>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  safeArea: { flex: 1 },
   content: {
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
     backgroundColor: colors.background,
-    paddingTop: 68,
+    paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 120,
   },
@@ -227,11 +238,13 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     marginBottom: 12,
   },
   stat: {
     flex: 1,
-    marginRight: 10,
+    minWidth: 160,
   },
   statWide: {
     marginBottom: 14,
@@ -275,5 +288,15 @@ const styles = StyleSheet.create({
   filterText: {
     color: colors.textPrimary,
     fontWeight: '700',
+  },
+  emptyTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  emptyText: {
+    color: colors.textSecondary,
+    lineHeight: 22,
   },
 });

@@ -5,7 +5,32 @@ const fallbackApiUrl = Platform.select({
   default: 'http://localhost:5000/api',
 });
 
-export const API_URL = `${process.env.EXPO_PUBLIC_API_URL || fallbackApiUrl}`.replace(/\/+$/, '');
+const configuredApiUrl = `${process.env.EXPO_PUBLIC_API_URL || ''}`.replace(/\/+$/, '');
+const REQUEST_TIMEOUT_MS = 2500;
+let lastWorkingApiUrl = configuredApiUrl || fallbackApiUrl;
+
+const normalizeApiUrl = (value) => `${value || ''}`.trim().replace(/\/+$/, '');
+
+const getCandidateApiUrls = () => {
+  const candidates = [];
+  const webHostname =
+    Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.hostname : '';
+
+  [configuredApiUrl].forEach((value) => {
+    const normalized = normalizeApiUrl(value);
+    if (normalized) candidates.push(normalized);
+  });
+
+  if (Platform.OS === 'web' && webHostname && webHostname !== 'localhost' && webHostname !== '127.0.0.1') {
+    candidates.push(`http://${webHostname}:5000/api`);
+  }
+
+  candidates.push(fallbackApiUrl);
+
+  return [...new Set(candidates.filter(Boolean))];
+};
+
+export const API_URL = normalizeApiUrl(lastWorkingApiUrl);
 
 const parseResponse = async (response) => {
   const raw = await response.text();
@@ -21,32 +46,62 @@ const parseResponse = async (response) => {
   }
 };
 
-const request = async (path, { method = 'GET', body, token } = {}) => {
+const fetchWithTimeout = async (url, options) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   try {
-    const response = await fetch(`${API_URL}${path}`, {
-      method,
-      headers: {
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
     });
-
-    const data = await parseResponse(response);
-
-    if (!response.ok) {
-      throw new Error(data?.message || 'Request failed.');
-    }
-
-    return data;
   } catch (error) {
-    if (error.message === 'Network request failed') {
-      throw new Error(
-        `Cannot connect to the backend at ${API_URL}. Check that the backend is running, the phone and server are on the same network, and Android cleartext traffic is enabled for HTTP URLs.`
-      );
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out.');
     }
     throw error;
+  } finally {
+    clearTimeout(timeout);
   }
+};
+
+const isRetryableNetworkError = (error) =>
+  ['Network request failed', 'Failed to fetch', 'Request timed out.'].includes(error?.message);
+
+const request = async (path, { method = 'GET', body, token } = {}) => {
+  const candidates = [lastWorkingApiUrl, ...getCandidateApiUrls()].filter(Boolean);
+
+  for (const baseUrl of [...new Set(candidates)]) {
+    try {
+      const response = await fetchWithTimeout(`${baseUrl}${path}`, {
+        method,
+        headers: {
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+
+      const data = await parseResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Request failed.');
+      }
+
+      lastWorkingApiUrl = baseUrl;
+      return data;
+    } catch (error) {
+      if (isRetryableNetworkError(error)) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error(
+    `Cannot connect to the backend. Tried ${[...new Set(candidates)].join(', ')}. Start the backend and make sure the app can reach the same machine on port 5000.`
+  );
 };
 
 export const registerUser = (payload) =>

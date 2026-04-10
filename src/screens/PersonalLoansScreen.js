@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
@@ -233,87 +234,89 @@ export default function PersonalLoansScreen() {
 
   return (
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Personal Vasuli</Text>
-        <Text style={styles.subtitle}>Track money you gave to one person outside any group.</Text>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <Text style={styles.title}>Personal Vasuli</Text>
+          <Text style={styles.subtitle}>Track money you gave to one person outside any group.</Text>
 
-        <View style={styles.statsRow}>
-          <GlassCard style={styles.statCard}>
-            <Text style={styles.statLabel}>To recover</Text>
-            <Text style={styles.statValue}>{formatCurrency(summary.pendingAmount)}</Text>
+          <View style={styles.statsRow}>
+            <GlassCard style={styles.statCard}>
+              <Text style={styles.statLabel}>To recover</Text>
+              <Text style={styles.statValue}>{formatCurrency(summary.pendingAmount)}</Text>
+            </GlassCard>
+            <GlassCard style={styles.statCard}>
+              <Text style={styles.statLabel}>Settled</Text>
+              <Text style={styles.statValue}>{formatCurrency(summary.paidAmount)}</Text>
+            </GlassCard>
+          </View>
+
+          <GlassCard style={styles.pendingCard}>
+            <Text style={styles.statLabel}>Pending people</Text>
+            <Text style={styles.statValue}>{summary.pendingCount}</Text>
           </GlassCard>
-          <GlassCard style={styles.statCard}>
-            <Text style={styles.statLabel}>Settled</Text>
-            <Text style={styles.statValue}>{formatCurrency(summary.paidAmount)}</Text>
-          </GlassCard>
-        </View>
 
-        <GlassCard style={styles.pendingCard}>
-          <Text style={styles.statLabel}>Pending people</Text>
-          <Text style={styles.statValue}>{summary.pendingCount}</Text>
-        </GlassCard>
+          <Pressable onPress={openCreateModal} style={styles.addButton}>
+            <LinearGradient colors={gradients.primary} style={styles.addButtonInner}>
+              <Feather name="plus" size={18} color={colors.textPrimary} />
+              <Text style={styles.addButtonText}>Add Personal Due</Text>
+            </LinearGradient>
+          </Pressable>
 
-        <Pressable onPress={openCreateModal} style={styles.addButton}>
-          <LinearGradient colors={gradients.primary} style={styles.addButtonInner}>
-            <Feather name="plus" size={18} color={colors.textPrimary} />
-            <Text style={styles.addButtonText}>Add Personal Due</Text>
-          </LinearGradient>
-        </Pressable>
-
-        {personalLoans.length ? (
-          personalLoans.map((loan) => {
-            const status = loanStatusMap[loan.status] || loanStatusMap.pending;
-            return (
-              <GlassCard key={loan.id} style={styles.loanCard}>
-                <View style={styles.loanTop}>
-                  <View style={styles.loanCopy}>
-                    <Text style={styles.loanName}>{loan.name}</Text>
-                    <Text style={styles.loanMeta}>{formatPhoneDisplay(loan.phone)} - {formatDate(loan.createdAt)}</Text>
+          {personalLoans.length ? (
+            personalLoans.map((loan) => {
+              const status = loanStatusMap[loan.status] || loanStatusMap.pending;
+              return (
+                <GlassCard key={loan.id} style={styles.loanCard}>
+                  <View style={styles.loanTop}>
+                    <View style={styles.loanCopy}>
+                      <Text style={styles.loanName}>{loan.name}</Text>
+                      <Text style={styles.loanMeta}>{formatPhoneDisplay(loan.phone)} - {formatDate(loan.createdAt)}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        status.style === 'paid' ? styles.statusPaid : null,
+                        status.style === 'pending' ? styles.statusPending : null,
+                        status.style === 'reminded' ? styles.statusReminded : null,
+                      ]}
+                    >
+                      <Text style={styles.statusText}>{status.label}</Text>
+                    </View>
                   </View>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      status.style === 'paid' ? styles.statusPaid : null,
-                      status.style === 'pending' ? styles.statusPending : null,
-                      status.style === 'reminded' ? styles.statusReminded : null,
-                    ]}
-                  >
-                    <Text style={styles.statusText}>{status.label}</Text>
-                  </View>
-                </View>
-                <Text style={[styles.loanAmount, loan.status === 'paid' ? styles.loanAmountPaid : null]}>
-                  {formatCurrency(loan.amount)}
-                </Text>
-                {loan.note ? <Text style={styles.loanNote}>{loan.note}</Text> : null}
-                <View style={styles.actions}>
-                  <Pressable onPress={() => handleWhatsApp(loan)} style={styles.actionChip}>
-                    <Text style={styles.actionChipText}>WhatsApp</Text>
-                  </Pressable>
-                  <Pressable onPress={() => handleCopy(loan)} style={styles.actionChip}>
-                    <Text style={styles.actionChipText}>Copy</Text>
-                  </Pressable>
-                  {loan.status !== 'paid' ? (
-                    <Pressable onPress={() => handleMarkPaid(loan)} style={styles.actionChip}>
-                      <Text style={styles.actionChipText}>Mark Paid</Text>
+                  <Text style={[styles.loanAmount, loan.status === 'paid' ? styles.loanAmountPaid : null]}>
+                    {formatCurrency(loan.amount)}
+                  </Text>
+                  {loan.note ? <Text style={styles.loanNote}>{loan.note}</Text> : null}
+                  <View style={styles.actions}>
+                    <Pressable onPress={() => handleWhatsApp(loan)} style={styles.actionChip}>
+                      <Text style={styles.actionChipText}>WhatsApp</Text>
                     </Pressable>
-                  ) : null}
-                  <Pressable onPress={() => handleDelete(loan)} style={[styles.actionChip, styles.deleteChip]}>
-                    <Text style={[styles.actionChipText, styles.deleteChipText]}>Delete</Text>
-                  </Pressable>
-                  <Pressable onPress={() => handleEdit(loan)} style={styles.actionChip}>
-                    <Text style={styles.actionChipText}>Edit</Text>
-                  </Pressable>
-                </View>
-              </GlassCard>
-            );
-          })
-        ) : (
-          <GlassCard>
-            <Text style={styles.emptyTitle}>No personal dues yet.</Text>
-            <Text style={styles.emptyText}>Add a person here when the money is not part of a group split.</Text>
-          </GlassCard>
-        )}
-      </ScrollView>
+                    <Pressable onPress={() => handleCopy(loan)} style={styles.actionChip}>
+                      <Text style={styles.actionChipText}>Copy</Text>
+                    </Pressable>
+                    {loan.status !== 'paid' ? (
+                      <Pressable onPress={() => handleMarkPaid(loan)} style={styles.actionChip}>
+                        <Text style={styles.actionChipText}>Mark Paid</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable onPress={() => handleDelete(loan)} style={[styles.actionChip, styles.deleteChip]}>
+                      <Text style={[styles.actionChipText, styles.deleteChipText]}>Delete</Text>
+                    </Pressable>
+                    <Pressable onPress={() => handleEdit(loan)} style={styles.actionChip}>
+                      <Text style={styles.actionChipText}>Edit</Text>
+                    </Pressable>
+                  </View>
+                </GlassCard>
+              );
+            })
+          ) : (
+            <GlassCard>
+              <Text style={styles.emptyTitle}>No personal dues yet.</Text>
+              <Text style={styles.emptyText}>Add a person here when the money is not part of a group split.</Text>
+            </GlassCard>
+          )}
+        </ScrollView>
+      </SafeAreaView>
 
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalBackdrop}>
@@ -409,11 +412,12 @@ export default function PersonalLoansScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  safeArea: { flex: 1 },
   content: {
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
-    paddingTop: 68,
+    paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 120,
   },
@@ -429,11 +433,13 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     marginBottom: 12,
   },
   statCard: {
     flex: 1,
-    marginRight: 10,
+    minWidth: 160,
   },
   pendingCard: {
     marginBottom: 14,

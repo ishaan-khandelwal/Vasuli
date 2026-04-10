@@ -245,23 +245,13 @@ export const AppProvider = ({ children }) => {
   };
 
   const signIn = async ({ email, password }) => {
-    setLoading(true);
-    try {
-      const response = await loginUser({ email, password });
-      await applyAuthResponse(response);
-    } finally {
-      setLoading(false);
-    }
+    const response = await loginUser({ email, password });
+    await applyAuthResponse(response);
   };
 
   const signUp = async ({ name, email, password }) => {
-    setLoading(true);
-    try {
-      const response = await registerUser({ name, email, password });
-      await applyAuthResponse(response);
-    } finally {
-      setLoading(false);
-    }
+    const response = await registerUser({ name, email, password });
+    await applyAuthResponse(response);
   };
 
   const signOut = async () => {

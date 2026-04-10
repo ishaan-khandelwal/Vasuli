@@ -5,6 +5,8 @@ import { colors } from '../constants/colors';
 import { formatCurrency } from '../utils/formatters';
 
 export default function BalanceSummary({ totalExpense, perPersonShare, settlements, membersById }) {
+  const pendingSettlements = settlements.filter((item) => item.status !== 'paid');
+
   return (
     <>
       <GlassCard style={styles.hero}>
@@ -19,8 +21,8 @@ export default function BalanceSummary({ totalExpense, perPersonShare, settlemen
       </GlassCard>
 
       <Text style={styles.sectionTitle}>Settlement plan</Text>
-      {settlements.length ? (
-        settlements.map((item) => (
+      {pendingSettlements.length ? (
+        pendingSettlements.map((item) => (
           <GlassCard key={`${item.debtorId}-${item.creditorId}`} style={styles.item}>
             <Text style={styles.itemText}>
               {membersById[item.debtorId]?.name} pays {membersById[item.creditorId]?.name}{' '}
@@ -40,7 +42,9 @@ export default function BalanceSummary({ totalExpense, perPersonShare, settlemen
 const styles = StyleSheet.create({
   hero: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: 16,
     marginBottom: 18,
   },
   label: {

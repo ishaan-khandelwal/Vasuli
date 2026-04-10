@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { colors, gradients } from '../constants/colors';
@@ -79,108 +80,110 @@ export default function SettingsScreen() {
 
   return (
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Profile, WhatsApp template, and app controls.</Text>
+      <SafeAreaView style={styles.flex} edges={['top']}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <Text style={styles.title}>Settings</Text>
+            <Text style={styles.subtitle}>Profile, WhatsApp template, and app controls.</Text>
 
-          <GlassCard style={styles.card}>
-            <Text style={styles.accountLabel}>Signed in as</Text>
-            <Text style={styles.accountValue}>{authUser?.email || 'Local account'}</Text>
-            <Text style={styles.label}>Your Name</Text>
-            <TextInput
-              value={draft.name}
-              onChangeText={(text) => setDraft((current) => ({ ...current, name: text }))}
-              style={styles.input}
-              placeholder="Your name"
-              placeholderTextColor={colors.muted}
-            />
-            <Text style={styles.label}>Default Country Code</Text>
-            <TextInput
-              value={draft.defaultCountryCode}
-              onChangeText={(text) => setDraft((current) => ({ ...current, defaultCountryCode: text.replace(/[^\d]/g, '') }))}
-              style={styles.input}
-              placeholder="91"
-              placeholderTextColor={colors.muted}
-              keyboardType="phone-pad"
-            />
-            <Text style={styles.label}>WhatsApp Reminder Template</Text>
-            <TextInput
-              value={draft.messageTemplate}
-              onChangeText={(text) => setDraft((current) => ({ ...current, messageTemplate: text }))}
-              style={[styles.input, styles.textarea]}
-              placeholder="[Name], [Amount], [GroupName], [Category]"
-              placeholderTextColor={colors.muted}
-              multiline
-            />
-            <Text style={styles.previewLabel}>Preview</Text>
-            <Text style={styles.preview}>{preview}</Text>
-          </GlassCard>
-
-          <GlassCard style={styles.card}>
-            <View style={styles.switchRow}>
-              <View style={styles.switchCopy}>
-                <Text style={styles.label}>Smart Auto Reminders</Text>
-                <Text style={styles.helperText}>
-                  Vasuli will send a notification on your chosen schedule so you can open the app and send reminders quickly.
-                </Text>
-              </View>
-              <Switch
-                value={Boolean(draft.autoRemindersEnabled)}
-                onValueChange={(value) => setDraft((current) => ({ ...current, autoRemindersEnabled: value }))}
-                trackColor={{ true: colors.primaryStart, false: colors.white10 }}
-              />
-            </View>
-            <Text style={styles.label}>Reminder Every</Text>
-            <View style={styles.inlineRow}>
+            <GlassCard style={styles.card}>
+              <Text style={styles.accountLabel}>Signed in as</Text>
+              <Text style={styles.accountValue}>{authUser?.email || 'Local account'}</Text>
+              <Text style={styles.label}>Your Name</Text>
               <TextInput
-                value={`${draft.autoReminderIntervalDays ?? 1}`}
+                value={draft.name}
+                onChangeText={(text) => setDraft((current) => ({ ...current, name: text }))}
+                style={styles.input}
+                placeholder="Your name"
+                placeholderTextColor={colors.muted}
+              />
+              <Text style={styles.label}>Default Country Code</Text>
+              <TextInput
+                value={draft.defaultCountryCode}
+                onChangeText={(text) => setDraft((current) => ({ ...current, defaultCountryCode: text.replace(/[^\d]/g, '') }))}
+                style={styles.input}
+                placeholder="91"
+                placeholderTextColor={colors.muted}
+                keyboardType="phone-pad"
+              />
+              <Text style={styles.label}>WhatsApp Reminder Template</Text>
+              <TextInput
+                value={draft.messageTemplate}
+                onChangeText={(text) => setDraft((current) => ({ ...current, messageTemplate: text }))}
+                style={[styles.input, styles.textarea]}
+                placeholder="[Name], [Amount], [GroupName], [Category]"
+                placeholderTextColor={colors.muted}
+                multiline
+              />
+              <Text style={styles.previewLabel}>Preview</Text>
+              <Text style={styles.preview}>{preview}</Text>
+            </GlassCard>
+
+            <GlassCard style={styles.card}>
+              <View style={styles.switchRow}>
+                <View style={styles.switchCopy}>
+                  <Text style={styles.label}>Smart Auto Reminders</Text>
+                  <Text style={styles.helperText}>
+                    Vasuli will send a notification on your chosen schedule so you can open the app and send reminders quickly.
+                  </Text>
+                </View>
+                <Switch
+                  value={Boolean(draft.autoRemindersEnabled)}
+                  onValueChange={(value) => setDraft((current) => ({ ...current, autoRemindersEnabled: value }))}
+                  trackColor={{ true: colors.primaryStart, false: colors.white10 }}
+                />
+              </View>
+              <Text style={styles.label}>Reminder Every</Text>
+              <View style={styles.inlineRow}>
+                <TextInput
+                  value={`${draft.autoReminderIntervalDays ?? 1}`}
+                  onChangeText={(text) =>
+                    setDraft((current) => ({
+                      ...current,
+                      autoReminderIntervalDays: text.replace(/[^\d]/g, ''),
+                    }))
+                  }
+                  style={[styles.input, styles.inlineInput]}
+                  placeholder="1"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="number-pad"
+                />
+                <Text style={styles.inlineSuffix}>day(s)</Text>
+              </View>
+              <Text style={styles.label}>Reminder Time</Text>
+              <TextInput
+                value={draft.autoReminderTime}
                 onChangeText={(text) =>
                   setDraft((current) => ({
                     ...current,
-                    autoReminderIntervalDays: text.replace(/[^\d]/g, ''),
+                    autoReminderTime: text.replace(/[^\d:]/g, '').slice(0, 5),
                   }))
                 }
-                style={[styles.input, styles.inlineInput]}
-                placeholder="1"
+                style={styles.input}
+                placeholder="09:00"
                 placeholderTextColor={colors.muted}
-                keyboardType="number-pad"
               />
-              <Text style={styles.inlineSuffix}>day(s)</Text>
-            </View>
-            <Text style={styles.label}>Reminder Time</Text>
-            <TextInput
-              value={draft.autoReminderTime}
-              onChangeText={(text) =>
-                setDraft((current) => ({
-                  ...current,
-                  autoReminderTime: text.replace(/[^\d:]/g, '').slice(0, 5),
-                }))
-              }
-              style={styles.input}
-              placeholder="09:00"
-              placeholderTextColor={colors.muted}
-            />
-            <Text style={styles.helperText}>Use 24-hour format like `09:00` or `21:30`.</Text>
-          </GlassCard>
+              <Text style={styles.helperText}>Use 24-hour format like `09:00` or `21:30`.</Text>
+            </GlassCard>
 
-          <Pressable onPress={save}>
-            <LinearGradient colors={gradients.primary} style={styles.saveButton}>
-              <Text style={styles.saveText}>Save Settings</Text>
-            </LinearGradient>
-          </Pressable>
+            <Pressable onPress={save}>
+              <LinearGradient colors={gradients.primary} style={styles.saveButton}>
+                <Text style={styles.saveText}>Save Settings</Text>
+              </LinearGradient>
+            </Pressable>
 
-          <Pressable onPress={() => openConfirm('signout')} style={styles.signOutButton}>
-            <Text style={styles.signOutText}>Sign out</Text>
-          </Pressable>
+            <Pressable onPress={() => openConfirm('signout')} style={styles.signOutButton}>
+              <Text style={styles.signOutText}>Sign out</Text>
+            </Pressable>
 
-          <Pressable onPress={() => openConfirm('reset')} style={styles.clearButton}>
-            <Text style={styles.clearText}>Clear all data</Text>
-          </Pressable>
+            <Pressable onPress={() => openConfirm('reset')} style={styles.clearButton}>
+              <Text style={styles.clearText}>Clear all data</Text>
+            </Pressable>
 
-          <Text style={styles.version}>Vasuli v1.0.0</Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            <Text style={styles.version}>Vasuli v1.0.0</Text>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
       <Modal visible={Boolean(confirmState)} transparent animationType="fade" onRequestClose={closeConfirm}>
         <View style={styles.modalBackdrop}>
@@ -215,7 +218,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
-    paddingTop: 68,
+    paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 120,
   },

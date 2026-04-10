@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { colors, gradients } from '../constants/colors';
 import { formatCurrency } from '../utils/formatters';
@@ -30,46 +31,48 @@ export default function HomeScreen() {
 
   return (
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl tintColor={colors.textPrimary} refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.brand}>Vasuli</Text>
-        <Text style={styles.subtitle}>Split. Track. Recover.</Text>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={<RefreshControl tintColor={colors.textPrimary} refreshing={refreshing} onRefresh={onRefresh} />}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.brand}>Vasuli</Text>
+          <Text style={styles.subtitle}>Split. Track. Recover.</Text>
 
-        <LinearGradient colors={gradients.primary} style={styles.banner}>
-          <Text style={styles.bannerLabel}>Total pending recovery</Text>
-          <Text style={styles.bannerValue}>{formatCurrency(totalPending)}</Text>
-          <Text style={styles.bannerSub}>Across {groups.length} active groups</Text>
-        </LinearGradient>
+          <LinearGradient colors={gradients.primary} style={styles.banner}>
+            <Text style={styles.bannerLabel}>Total pending recovery</Text>
+            <Text style={styles.bannerValue}>{formatCurrency(totalPending)}</Text>
+            <Text style={styles.bannerSub}>Across {groups.length} active groups</Text>
+          </LinearGradient>
 
-        <Text style={styles.sectionTitle}>Your groups</Text>
+          <Text style={styles.sectionTitle}>Your groups</Text>
 
-        {loading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : summaries.length ? (
-          summaries.map(({ group, summary }, index) => (
-            <GroupCard
-              key={group.id}
-              group={group}
-              summary={summary}
-              index={index}
-              onPress={() => navigation.navigate('GroupDetail', { groupId: group.id })}
-            />
-          ))
-        ) : (
-          <View style={styles.empty}>
-            <Text style={styles.emptyEyebrow}>Start</Text>
-            <Text style={styles.emptyTitle}>Start your first Vasuli group.</Text>
-            <Text style={styles.emptyText}>Track anything from dinner bills to weekend trips.</Text>
-          </View>
-        )}
-      </ScrollView>
+          {loading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : summaries.length ? (
+            summaries.map(({ group, summary }, index) => (
+              <GroupCard
+                key={group.id}
+                group={group}
+                summary={summary}
+                index={index}
+                onPress={() => navigation.navigate('GroupDetail', { groupId: group.id })}
+              />
+            ))
+          ) : (
+            <View style={styles.empty}>
+              <Text style={styles.emptyEyebrow}>Start</Text>
+              <Text style={styles.emptyTitle}>Start your first Vasuli group.</Text>
+              <Text style={styles.emptyText}>Track anything from dinner bills to weekend trips.</Text>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
 
       <Pressable style={styles.fab} onPress={() => navigation.navigate('CreateGroup')}>
         <LinearGradient colors={gradients.primary} style={styles.fabInner}>
@@ -82,12 +85,13 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  safeArea: { flex: 1 },
   content: {
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
     paddingHorizontal: 20,
-    paddingTop: 68,
+    paddingTop: 24,
     paddingBottom: 120,
   },
   brand: {

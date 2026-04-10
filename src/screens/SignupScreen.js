@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, gradients } from '../constants/colors';
 import { useApp } from '../context/AppContext';
@@ -51,6 +52,9 @@ export default function SignupScreen({ navigation }) {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.shell}>
+              <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+                <Feather name="chevron-left" size={20} color={colors.textPrimary} />
+              </Pressable>
               <Text style={styles.brand}>Vasuli</Text>
               <Text style={styles.title}>Create your account</Text>
               <Text style={styles.copy}>Create your account to sync group recoveries, reminders, and personal dues with the backend.</Text>
@@ -159,6 +163,17 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     alignSelf: 'center',
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 18,
   },
   blobA: {
     position: 'absolute',

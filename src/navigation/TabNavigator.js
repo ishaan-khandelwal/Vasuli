@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import PersonalLoansScreen from '../screens/PersonalLoansScreen';
 import VasuliDashboardScreen from '../screens/VasuliDashboardScreen';
@@ -30,12 +31,21 @@ function TabIcon({ icon, label, focused }) {
 }
 
 export default function TabNavigator() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: Math.max(72, 64 + insets.bottom),
+            paddingBottom: Math.max(12, insets.bottom),
+            paddingTop: Platform.OS === 'web' ? 10 : 8,
+          },
+        ],
       }}
     >
       <Tab.Screen
