@@ -7,7 +7,7 @@ const fallbackApiUrl = Platform.select({
 });
 
 const configuredApiUrl = `${process.env.EXPO_PUBLIC_API_URL || ''}`.replace(/\/+$/, '');
-const REQUEST_TIMEOUT_MS = 2500;
+const REQUEST_TIMEOUT_MS = 15000;
 let lastWorkingApiUrl = configuredApiUrl || fallbackApiUrl;
 
 const normalizeApiUrl = (value) => `${value || ''}`.trim().replace(/\/+$/, '');
@@ -51,7 +51,13 @@ const getCandidateApiUrls = () => {
     if (normalized) candidates.push(normalized);
   });
 
-  if (Platform.OS === 'web' && webHostname && webHostname !== 'localhost' && webHostname !== '127.0.0.1') {
+  if (
+    !configuredApiUrl &&
+    Platform.OS === 'web' &&
+    webHostname &&
+    webHostname !== 'localhost' &&
+    webHostname !== '127.0.0.1'
+  ) {
     candidates.push(`http://${webHostname}:5000/api`);
   }
 
@@ -131,7 +137,7 @@ const request = async (path, { method = 'GET', body, token } = {}) => {
   }
 
   throw new Error(
-    `Cannot connect to the backend. Tried ${[...new Set(candidates)].join(', ')}. Start the backend and make sure the app can reach the same machine on port 5000.`
+    `Cannot connect to the backend. Tried ${[...new Set(candidates)].join(', ')}. If you are using the deployed app, check that the hosted backend is awake and reachable. If you are testing locally, start the backend and make sure the app can reach port 5000 on the same machine.`
   );
 };
 
