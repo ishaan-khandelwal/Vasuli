@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 const fallbackApiUrl = Platform.select({
   android: 'http://10.0.2.2:5000/api',
@@ -10,6 +11,35 @@ const REQUEST_TIMEOUT_MS = 2500;
 let lastWorkingApiUrl = configuredApiUrl || fallbackApiUrl;
 
 const normalizeApiUrl = (value) => `${value || ''}`.trim().replace(/\/+$/, '');
+
+const extractHostname = (value) => {
+  const normalized = `${value || ''}`.trim();
+
+  if (!normalized) {
+    return '';
+  }
+
+  const withoutProtocol = normalized.replace(/^[a-z]+:\/\//i, '');
+  const [host] = withoutProtocol.split(/[/:?]/);
+  return host || '';
+};
+
+const getExpoHostBasedApiUrls = () => {
+  if (Platform.OS === 'web') {
+    return [];
+  }
+
+  const hostCandidates = [
+    Constants.expoConfig?.hostUri,
+    Constants.expoGoConfig?.debuggerHost,
+    Constants.manifest2?.extra?.expoClient?.hostUri,
+    Constants.linkingUri,
+  ]
+    .map(extractHostname)
+    .filter((host) => host && host !== 'localhost' && host !== '127.0.0.1');
+
+  return [...new Set(hostCandidates)].map((host) => `http://${host}:5000/api`);
+};
 
 const getCandidateApiUrls = () => {
   const candidates = [];
@@ -25,6 +55,7 @@ const getCandidateApiUrls = () => {
     candidates.push(`http://${webHostname}:5000/api`);
   }
 
+  candidates.push(...getExpoHostBasedApiUrls());
   candidates.push(fallbackApiUrl);
 
   return [...new Set(candidates.filter(Boolean))];

@@ -7,6 +7,23 @@ const AUTO_REMINDER_SOURCE = 'vasuli-auto-reminder';
 const AUTO_REMINDER_CHANNEL_ID = 'vasuli-auto-reminders';
 const MAX_SCHEDULED_OCCURRENCES = 30;
 
+const hasGrantedNotificationPermission = (permissions) => {
+  if (!permissions) {
+    return false;
+  }
+
+  if (Platform.OS === 'ios') {
+    const iosStatus = permissions.ios?.status;
+    return (
+      iosStatus === Notifications.IosAuthorizationStatus.AUTHORIZED ||
+      iosStatus === Notifications.IosAuthorizationStatus.PROVISIONAL ||
+      iosStatus === Notifications.IosAuthorizationStatus.EPHEMERAL
+    );
+  }
+
+  return permissions.granted || permissions.status === 'granted';
+};
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -151,19 +168,17 @@ export const syncAutoReminderNotifications = async ({ profile, groups, personalL
     return;
   }
 
-  const permissions = await Notifications.getPermissionsAsync();
-  let status = permissions.status;
+  await initializeNotificationChannel();
 
-  if (status !== 'granted') {
-    const requested = await Notifications.requestPermissionsAsync();
-    status = requested.status;
+  let permissions = await Notifications.getPermissionsAsync();
+
+  if (!hasGrantedNotificationPermission(permissions)) {
+    permissions = await Notifications.requestPermissionsAsync();
   }
 
-  if (status !== 'granted') {
+  if (!hasGrantedNotificationPermission(permissions)) {
     return;
   }
-
-  await initializeNotificationChannel();
 
   const firstTriggerDate = getFirstTriggerDate(settings.autoReminderTime, settings.autoReminderIntervalDays);
   const content = buildReminderContent(snapshot);
