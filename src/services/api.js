@@ -8,7 +8,6 @@ const fallbackApiUrl = Platform.select({
 
 const configuredApiUrl = `${process.env.EXPO_PUBLIC_API_URL || ''}`.replace(/\/+$/, '');
 const REQUEST_TIMEOUT_MS = 15000;
-let lastWorkingApiUrl = configuredApiUrl || fallbackApiUrl;
 
 const normalizeApiUrl = (value) => `${value || ''}`.trim().replace(/\/+$/, '');
 
@@ -23,6 +22,49 @@ const extractHostname = (value) => {
   const [host] = withoutProtocol.split(/[/:?]/);
   return host || '';
 };
+
+const isLocalHostname = (host) => host === 'localhost' || host === '127.0.0.1';
+
+const isPrivateHostname = (host) => {
+  if (isLocalHostname(host)) {
+    return true;
+  }
+
+  if (/^10\./.test(host) || /^192\.168\./.test(host)) {
+    return true;
+  }
+
+  const match = host.match(/^172\.(\d+)\./);
+  return Boolean(match && Number(match[1]) >= 16 && Number(match[1]) <= 31);
+};
+
+const getWebRuntime = () => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return { hostname: '', origin: '' };
+  }
+
+  return {
+    hostname: window.location.hostname,
+    origin: window.location.origin,
+  };
+};
+
+const shouldUseConfiguredApiUrl = () => {
+  const { hostname, origin } = getWebRuntime();
+
+  if (!hostname || isLocalHostname(hostname)) {
+    return true;
+  }
+
+  const configuredHost = extractHostname(configuredApiUrl);
+  const isHostedHttps = origin.startsWith('https://');
+
+  return !(isHostedHttps && isPrivateHostname(configuredHost));
+};
+
+const getConfiguredApiUrl = () => (shouldUseConfiguredApiUrl() ? configuredApiUrl : '');
+
+let lastWorkingApiUrl = getConfiguredApiUrl() || fallbackApiUrl;
 
 const getExpoHostBasedApiUrls = () => {
   if (Platform.OS === 'web') {
@@ -43,20 +85,23 @@ const getExpoHostBasedApiUrls = () => {
 
 const getCandidateApiUrls = () => {
   const candidates = [];
-  const webHostname =
-    Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.hostname : '';
+  const { hostname: webHostname, origin: webOrigin } = getWebRuntime();
+  const activeConfiguredApiUrl = getConfiguredApiUrl();
 
-  [configuredApiUrl].forEach((value) => {
+  [activeConfiguredApiUrl].forEach((value) => {
     const normalized = normalizeApiUrl(value);
     if (normalized) candidates.push(normalized);
   });
 
+  if (!activeConfiguredApiUrl && webOrigin && !isLocalHostname(webHostname)) {
+    candidates.push(`${webOrigin}/api`);
+  }
+
   if (
-    !configuredApiUrl &&
+    !activeConfiguredApiUrl &&
     Platform.OS === 'web' &&
     webHostname &&
-    webHostname !== 'localhost' &&
-    webHostname !== '127.0.0.1'
+    !isLocalHostname(webHostname)
   ) {
     candidates.push(`http://${webHostname}:5000/api`);
   }
@@ -93,7 +138,8 @@ const fetchWithTimeout = async (url, options) => {
       signal: controller.signal,
     });
   } catch (error) {
-    if (error.name === 'AbortError') {
+    const errorMsg = `${error?.message || ''}`.toLowerCase();
+    if (error.name === 'AbortError' || errorMsg.includes('abort') || errorMsg.includes('cancell')) {
       throw new Error('Request timed out.');
     }
     throw error;
@@ -102,8 +148,18 @@ const fetchWithTimeout = async (url, options) => {
   }
 };
 
-const isRetryableNetworkError = (error) =>
-  ['Network request failed', 'Failed to fetch', 'Request timed out.'].includes(error?.message);
+const isRetryableNetworkError = (error) => {
+  const msg = `${error?.message || ''}`.toLowerCase();
+  return (
+    msg.includes('network request failed') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('request timed out') ||
+    msg.includes('cancell') ||
+    msg.includes('abort') ||
+    msg.includes('econnrefused') ||
+    msg.includes('connection refused')
+  );
+};
 
 const request = async (path, { method = 'GET', body, token } = {}) => {
   const candidates = [lastWorkingApiUrl, ...getCandidateApiUrls()].filter(Boolean);

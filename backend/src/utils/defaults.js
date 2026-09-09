@@ -7,7 +7,10 @@ const createDefaultProfile = (name = 'You') => ({
   autoRemindersEnabled: false,
   autoReminderIntervalDays: 1,
   autoReminderTime: '09:00',
+  upiId: '',
+  autoDetectSmsEnabled: false,
 });
+
 
 const createDefaultAppData = (name = 'You') => ({
   groups: [],

@@ -30,7 +30,7 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient colors={['#06070D', '#11172C', '#17244A']} style={styles.container}>
+    <LinearGradient colors={gradients.appBackground} style={styles.container}>
       <View style={styles.glowTop} />
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>

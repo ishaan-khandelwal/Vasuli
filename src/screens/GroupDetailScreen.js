@@ -25,23 +25,37 @@ import { createLocalId } from '../utils/storage';
 import { copyText, runHapticImpact, runHapticSuccess } from '../utils/native';
 import { confirmAction } from '../utils/confirm';
 import { pickPhoneContact } from '../utils/contacts';
+import { generateUpiDeepLink } from '../utils/upi';
 import GlassCard from '../components/GlassCard';
 import ExpenseCard from '../components/ExpenseCard';
 import MemberCard from '../components/MemberCard';
 import DebtorCard from '../components/DebtorCard';
 import BalanceSummary from '../components/BalanceSummary';
 import ContactPhonePickerModal from '../components/ContactPhonePickerModal';
+import SettlementSummaryBanner from '../components/SettlementSummaryBanner';
+import ProofPreviewModal from '../components/ProofPreviewModal';
 
 const tabs = ['Expenses', 'Balances', 'Vasuli'];
 
 export default function GroupDetailScreen({ route, navigation }) {
   const { groupId } = route.params;
-  const { groups, profile, addExpense, deleteExpense, deleteGroup, updateGroup, updateSettlementStatus } = useApp();
+  const {
+    groups,
+    profile,
+    addExpense,
+    deleteExpense,
+    deleteGroup,
+    updateGroup,
+    updateSettlementStatus,
+    confirmSettlementPayment,
+    rejectSettlementPaymentProof,
+  } = useApp();
   const { showToast } = useToast();
   const group = groups.find((item) => item.id === groupId);
   const [activeTab, setActiveTab] = useState('Expenses');
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedSettlementProof, setSelectedSettlementProof] = useState(null);
   const [pickingContactMemberId, setPickingContactMemberId] = useState(null);
   const [pendingEditMemberContact, setPendingEditMemberContact] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -122,6 +136,20 @@ export default function GroupDetailScreen({ route, navigation }) {
   };
 
   const sendReminder = async (item) => {
+    // Resolve UPI link only when the logged-in user is the creditor.
+    // For phantom contacts (creditor is someone else), creditorUpiId is undefined
+    // and buildReminderMessage will simply omit the pay link.
+    const isLoggedInUserCreditor = item.creditorId === organizer?.id;
+    const creditorUpiId = isLoggedInUserCreditor ? profile.upiId || '' : '';
+    const upiLink = creditorUpiId
+      ? generateUpiDeepLink({
+          payeeVpa: creditorUpiId,
+          payeeName: organizer?.name || profile.name,
+          amount: item.amount,
+          note: `${group.name} settlement`,
+        })
+      : undefined;
+
     const message = buildReminderMessage({
       template: profile.messageTemplate,
       name: item.name,
@@ -129,6 +157,7 @@ export default function GroupDetailScreen({ route, navigation }) {
       groupName: group.name,
       category: group.category,
       organizerName: organizer.name || profile.name,
+      upiLink,
     });
 
     try {
@@ -291,7 +320,11 @@ export default function GroupDetailScreen({ route, navigation }) {
   return (
     <LinearGradient colors={gradients.appBackground} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={gradients.primary} style={styles.header}>
+        <View style={styles.header}>
+          <LinearGradient
+            colors={['rgba(99, 102, 241, 0.2)', 'rgba(8, 10, 16, 0.4)']}
+            style={StyleSheet.absoluteFillObject}
+          />
           <View style={styles.headerTop}>
             <Pressable onPress={() => navigation.goBack()} style={styles.back}>
               <Feather name="chevron-left" size={20} color={colors.textPrimary} />
@@ -303,15 +336,21 @@ export default function GroupDetailScreen({ route, navigation }) {
               }}
               style={styles.editAction}
             >
-              <Feather name="edit-3" size={18} color={colors.textPrimary} />
+              <Feather name="edit-3" size={16} color={colors.textPrimary} />
             </Pressable>
           </View>
           <Text style={styles.headerTitle}>{group.name}</Text>
-          <Text style={styles.headerMeta}>
-            {category.emoji} {group.category} - {formatDate(group.date)}
-          </Text>
-          <Text style={styles.headerAmount}>{formatCurrency(summary.totalExpense)}</Text>
-        </LinearGradient>
+          <View style={styles.headerMetaRow}>
+            <View style={[styles.categoryTag, { backgroundColor: `${category.color}20`, borderColor: `${category.color}40` }]}>
+              <Text style={styles.categoryTagText}>{category.emoji} {group.category}</Text>
+            </View>
+            <Text style={styles.headerMetaDate}>{formatDate(group.date)}</Text>
+          </View>
+          <View style={styles.headerAmountBox}>
+            <Text style={styles.headerAmountLabel}>Total Group Expense</Text>
+            <Text style={styles.headerAmount}>{formatCurrency(summary.totalExpense)}</Text>
+          </View>
+        </View>
 
         <View style={styles.tabRow}>
           {tabs.map((tab) => (
@@ -373,22 +412,49 @@ export default function GroupDetailScreen({ route, navigation }) {
 
         {activeTab === 'Vasuli' ? (
           <View style={styles.tabContent}>
+            <SettlementSummaryBanner
+              settlements={summary.settlements}
+              membersById={membersById}
+              organizerId={organizer?.id}
+              creditorUpiId={profile.upiId || ''}
+              onWhatsApp={(settlement) => {
+                const item = debtors.find(
+                  (d) => d.debtorId === settlement.debtorId && d.creditorId === settlement.creditorId
+                );
+                if (item) sendReminder(item);
+              }}
+            />
             <Pressable onPress={remindAll} style={styles.actionButton}>
               <LinearGradient colors={gradients.accent} style={styles.actionInner}>
                 <Text style={styles.actionText}>Remind All Pending</Text>
               </LinearGradient>
             </Pressable>
             {debtors.length ? (
-              debtors.map((item) => (
-                <DebtorCard
-                  key={`${item.debtorId}-${item.creditorId}`}
-                  debtor={item}
-                  creditor={membersById[item.creditorId]}
-                  onWhatsApp={() => sendReminder(item)}
-                  onMarkPaid={() => markPaid(item)}
-                  onCopy={() => copyMessage(item)}
-                />
-              ))
+              debtors.map((item) => {
+                // Pay Now only appears when the logged-in user is the creditor.
+                // Phantom contacts (creditor is another member) silently get
+                // no UPI button — WhatsApp is always the fallback baseline.
+                const isLoggedInUserCreditor = item.creditorId === organizer?.id;
+                const creditorUpiId = isLoggedInUserCreditor ? profile.upiId || '' : '';
+                return (
+                  <DebtorCard
+                    key={`${item.debtorId}-${item.creditorId}`}
+                    debtor={item}
+                    creditor={membersById[item.creditorId]}
+                    creditorUpiId={creditorUpiId}
+                    onWhatsApp={() => sendReminder(item)}
+                    onMarkPaid={() => markPaid(item)}
+                    onCopy={() => copyMessage(item)}
+                    onViewProof={(payment) =>
+                      setSelectedSettlementProof({
+                        payment,
+                        settlement: item,
+                        isCreditor: item.creditorId === organizer?.id,
+                      })
+                    }
+                  />
+                );
+              })
             ) : (
               <GlassCard>
                 <Text style={styles.emptyText}>No dues left in this group.</Text>
@@ -597,6 +663,35 @@ export default function GroupDetailScreen({ route, navigation }) {
           setPendingEditMemberContact(null);
         }}
       />
+
+      <ProofPreviewModal
+        visible={Boolean(selectedSettlementProof)}
+        onClose={() => setSelectedSettlementProof(null)}
+        payment={selectedSettlementProof?.payment}
+        isCreditor={selectedSettlementProof?.isCreditor}
+        onConfirm={async (paymentId) => {
+          if (selectedSettlementProof?.settlement) {
+            await confirmSettlementPayment(
+              group.id,
+              selectedSettlementProof.settlement.debtorId,
+              selectedSettlementProof.settlement.creditorId,
+              paymentId
+            );
+            showToast('Payment confirmed');
+          }
+        }}
+        onReject={async (paymentId) => {
+          if (selectedSettlementProof?.settlement) {
+            await rejectSettlementPaymentProof(
+              group.id,
+              selectedSettlementProof.settlement.debtorId,
+              selectedSettlementProof.settlement.creditorId,
+              paymentId
+            );
+            showToast('Payment proof rejected');
+          }
+        }}
+      />
     </LinearGradient>
   );
 }
@@ -610,12 +705,16 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    paddingTop: 62,
+    paddingTop: 56,
     paddingHorizontal: 20,
-    paddingBottom: 26,
+    paddingBottom: 24,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
-    borderTopWidth: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(16, 22, 36, 0.95)',
+    position: 'relative',
+    overflow: 'hidden',
   },
   headerTop: {
     flexDirection: 'row',
@@ -626,67 +725,110 @@ const styles = StyleSheet.create({
   editAction: {
     width: 38,
     height: 38,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   back: {
     width: 38,
     height: 38,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   headerTitle: {
     color: colors.textPrimary,
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: '900',
+    letterSpacing: -0.4,
   },
-  headerMeta: {
-    color: 'rgba(255,255,255,0.82)',
+  headerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 6,
+  },
+  categoryTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  categoryTagText: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  headerMetaDate: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  headerAmountBox: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  headerAmountLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   headerAmount: {
     color: colors.textPrimary,
     fontSize: 28,
     fontWeight: '900',
-    marginTop: 16,
+    letterSpacing: -0.6,
+    marginTop: 2,
   },
   tabRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     paddingHorizontal: 20,
     marginTop: 18,
-    marginBottom: 12,
-    gap: 10,
+    marginBottom: 14,
+    gap: 8,
   },
   tabContent: {
     marginHorizontal: 12,
     paddingTop: 14,
     paddingBottom: 20,
-    borderRadius: 28,
-    backgroundColor: colors.backgroundSoft,
+    borderRadius: 24,
+    backgroundColor: 'rgba(16, 21, 33, 0.65)',
     borderWidth: 1,
     borderColor: colors.border,
     minHeight: 320,
   },
   tab: {
-    paddingHorizontal: 14,
+    flex: 1,
     paddingVertical: 10,
-    borderRadius: 16,
-    backgroundColor: colors.white10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   activeTab: {
-    backgroundColor: 'rgba(108,99,255,0.25)',
+    backgroundColor: 'rgba(99, 102, 241, 0.22)',
+    borderColor: colors.primaryStart,
   },
   tabText: {
     color: colors.textSecondary,
-    fontWeight: '700',
+    fontWeight: '600',
+    fontSize: 13,
   },
   activeTabText: {
-    color: colors.textPrimary,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   totalCard: {
     marginHorizontal: 20,

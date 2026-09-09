@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { isRunningInExpoGo } from 'expo';
 import { summarizeGroup } from './calculations';
 import { formatCurrency } from './formatters';
 
@@ -7,6 +7,26 @@ const AUTO_REMINDER_SOURCE = 'vasuli-auto-reminder';
 const AUTO_REMINDER_CHANNEL_ID = 'vasuli-auto-reminders';
 const MAX_SCHEDULED_OCCURRENCES = 30;
 
+// Expo Go on Android dropped remote/push notification support in SDK 53+,
+// and importing expo-notifications at top level throws a fatal runtime error in Expo Go.
+const isExpoGoAndroid = Platform.OS === 'android' && isRunningInExpoGo();
+
+let Notifications = null;
+if (!isExpoGoAndroid && Platform.OS !== 'web') {
+  try {
+    Notifications = require('expo-notifications');
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }),
+    });
+  } catch (error) {
+    console.warn('[notifications] Failed to initialize expo-notifications:', error);
+  }
+}
 const hasGrantedNotificationPermission = (permissions) => {
   if (!permissions) {
     return false;
@@ -15,23 +35,14 @@ const hasGrantedNotificationPermission = (permissions) => {
   if (Platform.OS === 'ios') {
     const iosStatus = permissions.ios?.status;
     return (
-      iosStatus === Notifications.IosAuthorizationStatus.AUTHORIZED ||
-      iosStatus === Notifications.IosAuthorizationStatus.PROVISIONAL ||
-      iosStatus === Notifications.IosAuthorizationStatus.EPHEMERAL
+      iosStatus === Notifications?.IosAuthorizationStatus?.AUTHORIZED ||
+      iosStatus === Notifications?.IosAuthorizationStatus?.PROVISIONAL ||
+      iosStatus === Notifications?.IosAuthorizationStatus?.EPHEMERAL
     );
   }
 
   return permissions.granted || permissions.status === 'granted';
 };
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
 
 const clampWholeNumber = (value, fallback, min, max) => {
   const parsed = Number.parseInt(`${value || ''}`, 10);
@@ -133,12 +144,15 @@ const getFirstTriggerDate = (time, intervalDays) => {
 };
 
 const getScheduledAutoReminderRequests = async () => {
+  if (!Notifications) {
+    return [];
+  }
   const requests = await Notifications.getAllScheduledNotificationsAsync();
   return requests.filter((request) => request.content?.data?.source === AUTO_REMINDER_SOURCE);
 };
 
 export const initializeNotificationChannel = async () => {
-  if (Platform.OS !== 'android') {
+  if (Platform.OS !== 'android' || !Notifications) {
     return;
   }
 
@@ -151,7 +165,7 @@ export const initializeNotificationChannel = async () => {
 };
 
 export const syncAutoReminderNotifications = async ({ profile, groups, personalLoans }) => {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' || isExpoGoAndroid || !Notifications) {
     return;
   }
 

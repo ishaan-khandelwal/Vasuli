@@ -12,10 +12,6 @@
       "barStyle": "light-content",
       "translucent": false
     },
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#0F0F1A"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -25,7 +21,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0F0F1A"
       },
-      "usesCleartextTraffic": true,
       "blockedPermissions": [
         "android.permission.WRITE_CONTACTS"
       ]

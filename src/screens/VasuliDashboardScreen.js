@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -148,66 +149,115 @@ export default function VasuliDashboardScreen() {
           refreshControl={<RefreshControl tintColor={colors.textPrimary} refreshing={refreshing} onRefresh={onRefresh} />}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Vasuli Dashboard</Text>
-          <Text style={styles.subtitle}>Global recovery view across every group.</Text>
-
-          <View style={styles.statsRow}>
-            <GlassCard style={styles.stat}>
-              <Text style={styles.statLabel}>To recover</Text>
-              <Text style={styles.statValue}>{formatCurrency(global.totalPending)}</Text>
-            </GlassCard>
-            <GlassCard style={styles.stat}>
-              <Text style={styles.statLabel}>Settled</Text>
-              <Text style={styles.statValue}>{formatCurrency(global.totalSettled)}</Text>
-            </GlassCard>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Vasuli Center</Text>
+            <Text style={styles.subtitle}>Track debts and recover money across all your groups.</Text>
           </View>
-          <GlassCard style={styles.statWide}>
-            <Text style={styles.statLabel}>Pending reminders</Text>
-            <Text style={styles.statValue}>{global.pendingReminders}</Text>
+
+          {/* Overview Metric Widget */}
+          <GlassCard style={styles.summaryCard} variant="elevated">
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryCol}>
+                <Text style={styles.summaryLabel}>To Recover</Text>
+                <Text style={[styles.summaryValue, { color: colors.danger }]}>
+                  {formatCurrency(global.totalPending)}
+                </Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryCol}>
+                <Text style={styles.summaryLabel}>Settled</Text>
+                <Text style={[styles.summaryValue, { color: colors.success }]}>
+                  {formatCurrency(global.totalSettled)}
+                </Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryCol}>
+                <Text style={styles.summaryLabel}>Nudges</Text>
+                <Text style={[styles.summaryValue, { color: colors.accent }]}>
+                  {global.pendingReminders}
+                </Text>
+              </View>
+            </View>
           </GlassCard>
 
-          <TextInput
-            placeholder="Search person or group"
-            placeholderTextColor={colors.muted}
-            value={query}
-            onChangeText={setQuery}
-            style={styles.search}
-          />
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-            {filters.map((item) => (
-              <Pressable key={item} onPress={() => setFilter(item)} style={[styles.filter, filter === item && styles.filterActive]}>
-                <Text style={styles.filterText}>{item}</Text>
+          {/* Search Bar */}
+          <View style={styles.searchWrap}>
+            <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+            <TextInput
+              placeholder="Search debtor or group name..."
+              placeholderTextColor={colors.muted}
+              value={query}
+              onChangeText={setQuery}
+              style={styles.searchInput}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                <Feather name="x" size={16} color={colors.muted} />
               </Pressable>
-            ))}
-          </ScrollView>
+            )}
+          </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-            {sorts.map((item) => (
-              <Pressable key={item} onPress={() => setSortBy(item)} style={[styles.filter, sortBy === item && styles.filterActive]}>
-                <Text style={styles.filterText}>Sort: {item}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          {/* Filter Pills */}
+          <View style={styles.controlsSection}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
+              {filters.map((item) => {
+                const isActive = filter === item;
+                return (
+                  <Pressable
+                    key={item}
+                    onPress={() => setFilter(item)}
+                    style={[styles.pill, isActive && styles.pillActive]}
+                  >
+                    <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
+                      {item}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
 
-          {filtered.length ? (
-            filtered.map((item) => (
-              <DebtorCard
-                key={`${item.groupId}-${item.debtorId}-${item.creditorId}`}
-                debtor={item}
-                creditor={item.creditor}
-                groupName={item.groupName}
-                onWhatsApp={() => sendReminder(item)}
-                onMarkPaid={() => markPaid(item)}
-                onCopy={() => copyMessage(item)}
-              />
-            ))
-          ) : (
-            <GlassCard>
-              <Text style={styles.emptyTitle}>No matching dues.</Text>
-              <Text style={styles.emptyText}>Try another filter or search term.</Text>
-            </GlassCard>
-          )}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortsRow}>
+              <Text style={styles.sortLabel}>Sort by:</Text>
+              {sorts.map((item) => {
+                const isActive = sortBy === item;
+                return (
+                  <Pressable
+                    key={item}
+                    onPress={() => setSortBy(item)}
+                    style={[styles.sortPill, isActive && styles.sortPillActive]}
+                  >
+                    <Text style={[styles.sortPillText, isActive && styles.sortPillTextActive]}>
+                      {item}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Debtors List */}
+          <View style={styles.listSection}>
+            {filtered.length ? (
+              filtered.map((item) => (
+                <DebtorCard
+                  key={`${item.groupId}-${item.debtorId}-${item.creditorId}`}
+                  debtor={item}
+                  creditor={item.creditor}
+                  groupName={item.groupName}
+                  onWhatsApp={() => sendReminder(item)}
+                  onMarkPaid={() => markPaid(item)}
+                  onCopy={() => copyMessage(item)}
+                />
+              ))
+            ) : (
+              <GlassCard style={styles.emptyCard} variant="flat">
+                <Feather name="check-circle" size={32} color={colors.emerald} style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyTitle}>No matching dues</Text>
+                <Text style={styles.emptyText}>All dues matching this filter are settled, or no names match your search.</Text>
+              </GlassCard>
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -219,84 +269,156 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   content: {
     width: '100%',
-    maxWidth: 760,
+    maxWidth: 720,
     alignSelf: 'center',
-    backgroundColor: colors.background,
-    paddingTop: 24,
     paddingHorizontal: 20,
-    paddingBottom: 120,
+    paddingTop: 16,
+    paddingBottom: 110,
+  },
+  header: {
+    marginBottom: 20,
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '900',
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.textSecondary,
-    marginTop: 8,
-    marginBottom: 22,
+    fontSize: 13,
+    marginTop: 4,
   },
-  statsRow: {
+  summaryCard: {
+    marginBottom: 18,
+    padding: 18,
+    borderRadius: 22,
+  },
+  summaryRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  stat: {
+  summaryCol: {
+    alignItems: 'center',
     flex: 1,
-    minWidth: 160,
   },
-  statWide: {
-    marginBottom: 14,
+  summaryLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  statLabel: {
-    color: colors.textSecondary,
-    fontWeight: '700',
-  },
-  statValue: {
-    color: colors.textPrimary,
-    fontSize: 24,
+  summaryValue: {
+    fontSize: 18,
     fontWeight: '900',
-    marginTop: 10,
+    marginTop: 4,
+    letterSpacing: -0.3,
   },
-  search: {
-    backgroundColor: colors.white10,
-    borderWidth: 1,
-    borderColor: colors.border,
+  summaryDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(20, 26, 40, 0.8)',
     borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    color: colors.textPrimary,
-    marginBottom: 12,
-  },
-  filterRow: {
-    marginBottom: 10,
-  },
-  filter: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: colors.white10,
     borderWidth: 1,
     borderColor: colors.border,
-    marginRight: 8,
+    paddingHorizontal: 14,
+    height: 48,
+    marginBottom: 16,
   },
-  filterActive: {
-    backgroundColor: 'rgba(108,99,255,0.24)',
-    borderColor: 'rgba(108,99,255,0.7)',
+  searchIcon: {
+    marginRight: 10,
   },
-  filterText: {
+  searchInput: {
+    flex: 1,
     color: colors.textPrimary,
+    fontSize: 14,
+  },
+  controlsSection: {
+    marginBottom: 16,
+    gap: 8,
+  },
+  pillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  pillActive: {
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: colors.primaryStart,
+  },
+  pillText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pillTextActive: {
+    color: '#FFFFFF',
     fontWeight: '700',
+  },
+  sortsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  sortLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  sortPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  sortPillActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  sortPillText: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  sortPillTextActive: {
+    color: colors.cyan,
+    fontWeight: '700',
+  },
+  listSection: {
+    marginTop: 6,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    padding: 32,
+    borderRadius: 22,
+    marginTop: 10,
   },
   emptyTitle: {
     color: colors.textPrimary,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
-    marginBottom: 8,
   },
   emptyText: {
     color: colors.textSecondary,
-    lineHeight: 22,
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 6,
+    maxWidth: 280,
+    lineHeight: 18,
   },
 });

@@ -32,17 +32,27 @@ export const buildReminderMessage = ({
   template,
   name,
   amount,
+  remainingAmount,
   groupName,
   category,
   organizerName,
-}) =>
-  applyTemplate(template, {
+  upiLink,
+}) => {
+  // Use remaining balance when a partial payment has already been made,
+  // so the reminder accurately reflects what's still owed.
+  const displayAmount = remainingAmount !== undefined ? remainingAmount : amount;
+  const base = applyTemplate(template, {
     name,
-    amount,
+    amount: displayAmount,
     groupName,
     category,
     organizerName,
   });
+  if (upiLink) {
+    return `${base}\n\nPay now: ${upiLink}`;
+  }
+  return base;
+};
 
 export const buildSettlementConfirmationMessage = ({
   name,

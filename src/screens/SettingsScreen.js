@@ -1,6 +1,20 @@
-import React, { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  DeviceEventEmitter,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -9,12 +23,18 @@ import GlassCard from '../components/GlassCard';
 import { buildReminderMessage } from '../utils/whatsapp';
 import { formatCurrency } from '../utils/formatters';
 import { normalizeReminderTime } from '../utils/notifications';
+import { isValidUpiId } from '../utils/upi';
+import SmsPermissionModal from '../components/SmsPermissionModal';
+import SmsSimulatorModal from '../components/SmsSimulatorModal';
+import { requestSmsPermission } from '../utils/smsReader';
 
 export default function SettingsScreen() {
   const { profile, authUser, updateUserProfile, resetApp, signOut } = useApp();
   const { showToast } = useToast();
   const [draft, setDraft] = useState(profile);
   const [confirmState, setConfirmState] = useState(null);
+  const [showSmsPermissionModal, setShowSmsPermissionModal] = useState(false);
+  const [showSmsSimulatorModal, setShowSmsSimulatorModal] = useState(false);
 
   React.useEffect(() => {
     setDraft(profile);
@@ -35,13 +55,59 @@ export default function SettingsScreen() {
   if (!draft) return null;
 
   const save = async () => {
+    const upiId = (draft.upiId || '').trim();
+    if (upiId && !isValidUpiId(upiId)) {
+      // Non-blocking warning — regex is intentionally loose, but at least catch
+      // obviously wrong formats (missing @, spaces, etc.) before saving.
+      showToast('UPI ID looks invalid — check the format (e.g. name@bank)');
+    }
     await updateUserProfile({
       ...draft,
+      upiId,
       defaultCountryCode: draft.defaultCountryCode || '91',
       autoReminderIntervalDays: Math.min(30, Math.max(1, Number.parseInt(draft.autoReminderIntervalDays || '1', 10) || 1)),
       autoReminderTime: normalizeReminderTime(draft.autoReminderTime),
+      autoDetectSmsEnabled: Boolean(draft.autoDetectSmsEnabled),
     });
     showToast(draft.autoRemindersEnabled ? 'Settings saved. Allow notifications if prompted.' : 'Settings saved');
+  };
+
+  const handleToggleSmsDetection = async (value) => {
+    if (Platform.OS !== 'android') {
+      Alert.alert('Not Supported', 'SMS auto-detection is only supported on Android devices.');
+      return;
+    }
+
+    if (value) {
+      setShowSmsPermissionModal(true);
+    } else {
+      setDraft((c) => ({ ...c, autoDetectSmsEnabled: false }));
+      await updateUserProfile({ ...draft, autoDetectSmsEnabled: false });
+      showToast('SMS Auto-Detection disabled');
+    }
+  };
+
+  const handleConfirmSmsPermission = async () => {
+    setShowSmsPermissionModal(false);
+    const granted = await requestSmsPermission();
+    setDraft((c) => ({ ...c, autoDetectSmsEnabled: true }));
+    await updateUserProfile({ ...draft, autoDetectSmsEnabled: true });
+    if (granted) {
+      showToast('SMS Auto-Detection enabled');
+    } else {
+      showToast('Enabled. (Simulator mode active in Expo Go)');
+    }
+  };
+
+  const handleSimulatePayment = (parsedCredit) => {
+    DeviceEventEmitter.emit('vasuli:simulate-sms', parsedCredit);
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('vasuli:simulate-sms', { detail: parsedCredit })
+        );
+      } catch (_) {}
+    }
   };
 
   const openConfirm = (type) => {
@@ -106,6 +172,20 @@ export default function SettingsScreen() {
                 placeholderTextColor={colors.muted}
                 keyboardType="phone-pad"
               />
+              <Text style={styles.label}>Your UPI ID</Text>
+              <TextInput
+                value={draft.upiId || ''}
+                onChangeText={(text) => setDraft((current) => ({ ...current, upiId: text.trim() }))}
+                style={styles.input}
+                placeholder="yourname@upi / 9876543210@ybl"
+                placeholderTextColor={colors.muted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+              />
+              <Text style={styles.helperText}>
+                Used to generate "Pay Now" links for people who owe you money. Leave blank to disable UPI buttons.
+              </Text>
               <Text style={styles.label}>WhatsApp Reminder Template</Text>
               <TextInput
                 value={draft.messageTemplate}
@@ -115,11 +195,16 @@ export default function SettingsScreen() {
                 placeholderTextColor={colors.muted}
                 multiline
               />
-              <Text style={styles.previewLabel}>Preview</Text>
-              <Text style={styles.preview}>{preview}</Text>
+              <View style={styles.previewContainer}>
+                <View style={styles.previewHeader}>
+                  <Feather name="message-circle" size={13} color={colors.whatsapp} />
+                  <Text style={styles.previewLabel}>Live WhatsApp Preview</Text>
+                </View>
+                <Text style={styles.preview}>{preview}</Text>
+              </View>
             </GlassCard>
 
-            <GlassCard style={styles.card}>
+            <GlassCard style={styles.card} variant="elevated">
               <View style={styles.switchRow}>
                 <View style={styles.switchCopy}>
                   <Text style={styles.label}>Smart Auto Reminders</Text>
@@ -166,6 +251,33 @@ export default function SettingsScreen() {
               <Text style={styles.helperText}>Use 24-hour format like `09:00` or `21:30`.</Text>
             </GlassCard>
 
+            <GlassCard style={styles.card} variant="elevated">
+              <View style={styles.switchRow}>
+                <View style={styles.switchCopy}>
+                  <Text style={styles.sectionTitle}>Auto-Detect Payments (SMS)</Text>
+                  <Text style={styles.helperText}>
+                    {Platform.OS === 'android'
+                      ? 'Reads bank credit SMS on your phone to automatically detect incoming UPI payments from debtors.'
+                      : 'SMS auto-detection is only supported on Android devices.'}
+                  </Text>
+                </View>
+                <Switch
+                  value={Boolean(draft.autoDetectSmsEnabled)}
+                  disabled={Platform.OS !== 'android'}
+                  onValueChange={handleToggleSmsDetection}
+                  trackColor={{ true: colors.primaryStart, false: colors.white10 }}
+                />
+              </View>
+
+              <Pressable
+                onPress={() => setShowSmsSimulatorModal(true)}
+                style={styles.simulatorButton}
+              >
+                <Feather name="terminal" size={15} color={colors.cyan} />
+                <Text style={styles.simulatorButtonText}>Test SMS Detection (Simulator)</Text>
+              </Pressable>
+            </GlassCard>
+
             <Pressable onPress={save}>
               <LinearGradient colors={gradients.primary} style={styles.saveButton}>
                 <Text style={styles.saveText}>Save Settings</Text>
@@ -207,6 +319,18 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <SmsPermissionModal
+        visible={showSmsPermissionModal}
+        onConfirm={handleConfirmSmsPermission}
+        onCancel={() => setShowSmsPermissionModal(false)}
+      />
+
+      <SmsSimulatorModal
+        visible={showSmsSimulatorModal}
+        onClose={() => setShowSmsSimulatorModal(false)}
+        onSimulatePayment={handleSimulatePayment}
+      />
     </LinearGradient>
   );
 }
@@ -261,14 +385,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: colors.white10,
+    backgroundColor: 'rgba(16, 21, 33, 0.7)',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingVertical: 12,
     color: colors.textPrimary,
     marginBottom: 10,
+    fontSize: 14,
   },
   switchRow: {
     flexDirection: 'row',
@@ -295,59 +420,79 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   textarea: {
-    minHeight: 160,
+    minHeight: 120,
     textAlignVertical: 'top',
   },
-  previewLabel: {
-    color: colors.accent,
-    fontWeight: '800',
+  previewContainer: {
+    backgroundColor: 'rgba(37, 211, 102, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 211, 102, 0.22)',
+    borderRadius: 14,
+    padding: 14,
     marginTop: 8,
-    marginBottom: 8,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  previewLabel: {
+    color: colors.whatsapp,
+    fontWeight: '800',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   preview: {
-    color: colors.textSecondary,
-    lineHeight: 22,
+    color: colors.textPrimary,
+    lineHeight: 20,
+    fontSize: 13,
   },
   saveButton: {
-    borderRadius: 18,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 15,
     alignItems: 'center',
     marginBottom: 14,
   },
   saveText: {
-    color: colors.textPrimary,
+    color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 16,
+    fontSize: 15,
   },
   clearButton: {
-    borderRadius: 18,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 15,
     alignItems: 'center',
-    backgroundColor: 'rgba(239,68,68,0.14)',
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.35)',
+    borderColor: 'rgba(244, 63, 94, 0.25)',
   },
   signOutButton: {
-    borderRadius: 18,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 15,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: 14,
   },
   signOutText: {
     color: colors.textPrimary,
-    fontWeight: '800',
+    fontWeight: '700',
+    fontSize: 14,
   },
   clearText: {
     color: colors.danger,
-    fontWeight: '800',
+    fontWeight: '700',
+    fontSize: 14,
   },
   version: {
-    color: colors.textSecondary,
+    color: colors.muted,
     textAlign: 'center',
     marginTop: 22,
+    fontSize: 12,
+    fontWeight: '500',
   },
   modalBackdrop: {
     flex: 1,
@@ -416,5 +561,22 @@ const styles = StyleSheet.create({
   modalConfirmText: {
     color: colors.textPrimary,
     fontWeight: '800',
+  },
+  simulatorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(6, 182, 212, 0.3)',
+  },
+  simulatorButtonText: {
+    color: colors.cyan,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

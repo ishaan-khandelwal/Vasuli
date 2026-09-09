@@ -7,6 +7,7 @@ import * as SystemUI from 'expo-system-ui';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AppProvider } from './src/context/AppContext';
 import { ToastProvider } from './src/context/ToastContext';
+import SmsPaymentDetector from './src/components/SmsPaymentDetector';
 import { colors } from './src/constants/colors';
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <ToastProvider>
           <AppProvider>
             <StatusBar style="light" />
+            <SmsPaymentDetector />
             <AppNavigator />
           </AppProvider>
         </ToastProvider>

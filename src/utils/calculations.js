@@ -1,3 +1,5 @@
+import { getTotalPaid } from './payments';
+
 const round = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
 const getPaidSettlementAdjustments = (group) => {
@@ -8,14 +10,24 @@ const getPaidSettlementAdjustments = (group) => {
   });
 
   (group.settlements || []).forEach((settlement) => {
-    if (settlement.status !== 'paid') return;
-    const amount = Number(settlement.amount) || 0;
+    // Use getTotalPaid so partial payments (payments[]) also reduce balances,
+    // not just fully-paid settlements. Falls back to the full amount when
+    // status === 'paid' and no payments[] exist (old records, no backfill).
+    const amount =
+      settlement.payments && settlement.payments.length > 0
+        ? getTotalPaid(settlement.payments)
+        : settlement.status === 'paid'
+        ? Number(settlement.amount) || 0
+        : 0;
+
+    if (amount <= 0) return;
     adjustments[settlement.debtorId] = round((adjustments[settlement.debtorId] || 0) + amount);
     adjustments[settlement.creditorId] = round((adjustments[settlement.creditorId] || 0) - amount);
   });
 
   return adjustments;
 };
+
 
 export const calculateMemberBalances = (group, options = {}) => {
   const { includePaidSettlements = false } = options;

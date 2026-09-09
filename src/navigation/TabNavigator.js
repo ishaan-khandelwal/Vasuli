@@ -13,19 +13,22 @@ import { colors, gradients } from '../constants/colors';
 const Tab = createBottomTabNavigator();
 
 function TabIcon({ icon, label, focused }) {
-  if (focused) {
-    return (
-      <LinearGradient colors={gradients.primary} style={styles.activeTab}>
-        <Ionicons name={icon} size={18} color={colors.textPrimary} />
-        <Text style={styles.activeLabel}>{label}</Text>
-      </LinearGradient>
-    );
-  }
-
   return (
-    <View style={styles.inactiveTab}>
-      <Ionicons name={icon} size={18} color={colors.textSecondary} />
-      <Text style={styles.inactiveLabel}>{label}</Text>
+    <View style={styles.tabItem}>
+      {focused ? (
+        <LinearGradient
+          colors={['rgba(99, 102, 241, 0.22)', 'rgba(6, 182, 212, 0.12)']}
+          style={styles.activePill}
+        >
+          <Ionicons name={icon} size={20} color={colors.primaryStart} />
+          <Text style={styles.activeLabel} numberOfLines={1}>{label}</Text>
+        </LinearGradient>
+      ) : (
+        <View style={styles.inactivePill}>
+          <Ionicons name={icon} size={20} color={colors.textSecondary} />
+          <Text style={styles.inactiveLabel} numberOfLines={1}>{label}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -41,9 +44,9 @@ export default function TabNavigator() {
         tabBarStyle: [
           styles.tabBar,
           {
-            height: Math.max(72, 64 + insets.bottom),
+            height: Math.max(76, 68 + insets.bottom),
             paddingBottom: Math.max(12, insets.bottom),
-            paddingTop: Platform.OS === 'web' ? 10 : 8,
+            paddingTop: 8,
           },
         ],
       }}
@@ -52,28 +55,28 @@ export default function TabNavigator() {
         name="GroupsTab"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="home" label="Groups" />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={focused ? "people" : "people-outline"} label="Groups" />,
         }}
       />
       <Tab.Screen
         name="VasuliTab"
         component={VasuliDashboardScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="wallet" label="Vasuli" />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={focused ? "flash" : "flash-outline"} label="Vasuli" />,
         }}
       />
       <Tab.Screen
         name="PersonalTab"
         component={PersonalLoansScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="person" label="Personal" />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={focused ? "wallet" : "wallet-outline"} label="Personal" />,
         }}
       />
       <Tab.Screen
         name="SettingsTab"
         component={SettingsScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="settings" label="Settings" />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon={focused ? "settings" : "settings-outline"} label="Settings" />,
         }}
       />
     </Tab.Navigator>
@@ -83,41 +86,62 @@ export default function TabNavigator() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: 14,
+    right: 14,
     bottom: 12,
-    height: 84,
-    maxWidth: 760,
+    maxWidth: 680,
     alignSelf: 'center',
-    backgroundColor: 'rgba(11,14,30,0.92)',
+    backgroundColor: 'rgba(11, 15, 25, 0.94)',
     borderTopWidth: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
     borderRadius: 28,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 18,
+    paddingHorizontal: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.5,
+        shadowRadius: 24,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0 12px 32px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+      },
+    }),
   },
-  activeTab: {
-    minWidth: 98,
-    height: 44,
-    borderRadius: 16,
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  activePill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.35)',
   },
   activeLabel: {
-    color: colors.textPrimary,
+    color: '#FFFFFF',
     fontWeight: '700',
-    marginLeft: 8,
+    fontSize: 12,
+    marginLeft: 6,
   },
-  inactiveTab: {
+  inactivePill: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 6,
   },
   inactiveLabel: {
-    color: colors.textSecondary,
-    fontSize: 12,
+    color: colors.muted,
+    fontSize: 11,
     marginTop: 3,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

@@ -80,6 +80,8 @@ export const defaultProfile = {
   autoRemindersEnabled: false,
   autoReminderIntervalDays: 1,
   autoReminderTime: '09:00',
+  upiId: '',
+  autoDetectSmsEnabled: false,
 };
 
 export const defaultAuthSession = {

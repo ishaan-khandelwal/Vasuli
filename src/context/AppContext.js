@@ -15,7 +15,12 @@ import {
   savePersonalLoans,
   saveProfile,
 } from '../utils/storage';
-import { mergeSettlementsWithSuggestions } from '../utils/calculations';
+import {
+  addPaymentRecord,
+  applyAutoConfirm,
+  confirmPaymentInList,
+  rejectPaymentProofInList,
+} from '../utils/payments';
 import {
   fetchAppData,
   loginUser,
@@ -69,13 +74,29 @@ export const AppProvider = ({ children }) => {
 
   const cacheAppSnapshot = async (snapshot, fallbackName) => {
     const normalized = normalizeAppSnapshot(snapshot, fallbackName);
-    setGroups(withComputedSettlements(normalized.groups));
-    setPersonalLoans(normalized.personalLoans);
+
+    // Run auto-confirm on boot for any proof records left unconfirmed > 7 days.
+    // ⚠️  Scale note: client-side only for now. Migrate to a backend cron if
+    //     server-side auto-confirm notifications are ever needed.
+    const loansWithAutoConfirm = (normalized.personalLoans || []).map((loan) => ({
+      ...loan,
+      payments: applyAutoConfirm(loan.payments),
+    }));
+    const groupsWithAutoConfirm = (normalized.groups || []).map((group) => ({
+      ...group,
+      settlements: (group.settlements || []).map((s) => ({
+        ...s,
+        payments: applyAutoConfirm(s.payments),
+      })),
+    }));
+
+    setGroups(withComputedSettlements(groupsWithAutoConfirm));
+    setPersonalLoans(loansWithAutoConfirm);
     setProfile(normalized.profile);
 
     await Promise.all([
-      saveGroups(normalized.groups),
-      savePersonalLoans(normalized.personalLoans),
+      saveGroups(groupsWithAutoConfirm),
+      savePersonalLoans(loansWithAutoConfirm),
       saveProfile(normalized.profile),
     ]);
 
@@ -244,6 +265,87 @@ export const AppProvider = ({ children }) => {
     await persistPersonalLoans((current) => current.filter((loan) => loan.id !== loanId));
   };
 
+  /**
+   * Appends a payment record to a personal loan and recalculates its status.
+   * paymentRecord should be created with createPaymentRecord() from payments.js.
+   */
+  const addLoanPayment = async (loanId, paymentRecord) => {
+    await persistPersonalLoans((current) =>
+      current.map((loan) => (loan.id === loanId ? addPaymentRecord(loan, paymentRecord) : loan))
+    );
+  };
+
+  /**
+   * Appends a payment record to a group settlement and recalculates its status.
+   */
+  const addSettlementPayment = async (groupId, debtorId, creditorId, paymentRecord) => {
+    await persistGroups((current) =>
+      current.map((group) => {
+        if (group.id !== groupId) return group;
+        return {
+          ...group,
+          settlements: (group.settlements || []).map((s) =>
+            s.debtorId === debtorId && s.creditorId === creditorId
+              ? addPaymentRecord(s, paymentRecord)
+              : s
+          ),
+        };
+      })
+    );
+  };
+
+  const confirmLoanPayment = async (loanId, paymentId) => {
+    await persistPersonalLoans((current) =>
+      current.map((loan) =>
+        loan.id === loanId
+          ? { ...loan, payments: confirmPaymentInList(loan.payments, paymentId) }
+          : loan
+      )
+    );
+  };
+
+  const rejectLoanPaymentProof = async (loanId, paymentId) => {
+    await persistPersonalLoans((current) =>
+      current.map((loan) =>
+        loan.id === loanId
+          ? { ...loan, payments: rejectPaymentProofInList(loan.payments, paymentId) }
+          : loan
+      )
+    );
+  };
+
+  const confirmSettlementPayment = async (groupId, debtorId, creditorId, paymentId) => {
+    await persistGroups((current) =>
+      current.map((group) => {
+        if (group.id !== groupId) return group;
+        return {
+          ...group,
+          settlements: (group.settlements || []).map((s) =>
+            s.debtorId === debtorId && s.creditorId === creditorId
+              ? { ...s, payments: confirmPaymentInList(s.payments, paymentId) }
+              : s
+          ),
+        };
+      })
+    );
+  };
+
+  const rejectSettlementPaymentProof = async (groupId, debtorId, creditorId, paymentId) => {
+    await persistGroups((current) =>
+      current.map((group) => {
+        if (group.id !== groupId) return group;
+        return {
+          ...group,
+          settlements: (group.settlements || []).map((s) =>
+            s.debtorId === debtorId && s.creditorId === creditorId
+              ? { ...s, payments: rejectPaymentProofInList(s.payments, paymentId) }
+              : s
+          ),
+        };
+      })
+    );
+  };
+
   const signIn = async ({ email, password }) => {
     const response = await loginUser({ email, password });
     await applyAuthResponse(response);
@@ -289,6 +391,7 @@ export const AppProvider = ({ children }) => {
       personalLoans,
       profile,
       authUser,
+      authToken,
       isAuthenticated,
       loading,
       reload: loadApp,
@@ -298,6 +401,12 @@ export const AppProvider = ({ children }) => {
       createPersonalLoan,
       updatePersonalLoan,
       deletePersonalLoan,
+      addLoanPayment,
+      confirmLoanPayment,
+      rejectLoanPaymentProof,
+      addSettlementPayment,
+      confirmSettlementPayment,
+      rejectSettlementPaymentProof,
       addExpense,
       deleteExpense,
       updateSettlementStatus,
@@ -307,7 +416,7 @@ export const AppProvider = ({ children }) => {
       signOut,
       resetApp,
     }),
-    [groups, personalLoans, profile, authUser, isAuthenticated, loading]
+    [groups, personalLoans, profile, authUser, authToken, isAuthenticated, loading]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

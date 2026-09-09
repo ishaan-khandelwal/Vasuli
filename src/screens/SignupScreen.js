@@ -41,7 +41,7 @@ export default function SignupScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient colors={['#05060C', '#10172E', '#192A50']} style={styles.container}>
+    <LinearGradient colors={gradients.appBackground} style={styles.container}>
       <View style={styles.blobA} />
       <View style={styles.blobB} />
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
