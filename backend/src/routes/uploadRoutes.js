@@ -1,79 +1,87 @@
+const crypto = require('crypto');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const { put } = require('@vercel/blob');
 const { authMiddleware } = require('../middleware/auth');
+const { uploadLimiter } = require('../middleware/rateLimiters');
+const { isProduction } = require('../utils/auth');
 
 const router = express.Router();
 
-const storage = multer.memoryStorage();
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+    fields: 0,
   },
   fileFilter: (req, file, cb) => {
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-    if (allowedMimeTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only JPEG, PNG, and WebP images are allowed.'));
+    if (['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      return cb(null, true);
     }
+    const error = new Error('Only JPEG, PNG, and WebP images are allowed.');
+    error.statusCode = 400;
+    return cb(error);
   },
 });
 
+/**
+ * The declared MIME type is client-controlled, so the real type is derived from the file's
+ * magic bytes. The stored extension comes from this, never from the uploaded file name.
+ */
+const detectImageType = (buffer) => {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return { extension: '.jpg', contentType: 'image/jpeg' };
+  }
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { extension: '.png', contentType: 'image/png' };
+  }
+  if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
+    return { extension: '.webp', contentType: 'image/webp' };
+  }
+  return null;
+};
+
 router.use(authMiddleware);
 
-router.post('/proof', upload.single('proof'), async (req, res, next) => {
+router.post('/proof', uploadLimiter, upload.single('proof'), async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No proof image provided.' });
     }
 
-    const extension = path.extname(req.file.originalname) || '.jpg';
-    const timestamp = Date.now();
-    const randomSuffix = Math.random().toString(16).slice(2, 8);
-    const filename = `proofs/${req.user.id}/${timestamp}-${randomSuffix}${extension}`;
+    const type = detectImageType(req.file.buffer);
+    if (!type) {
+      return res.status(400).json({ message: 'The uploaded file is not a valid JPEG, PNG, or WebP image.' });
+    }
 
-    // Production environment requires Vercel Blob
+    // Unguessable name: the blob URL is public, so it must not be enumerable.
+    const objectName = `${Date.now()}-${crypto.randomBytes(16).toString('hex')}${type.extension}`;
+
     if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(filename, req.file.buffer, {
+      const blob = await put(`proofs/${req.user.id}/${objectName}`, req.file.buffer, {
         access: 'public',
         token: process.env.BLOB_READ_WRITE_TOKEN,
-        contentType: req.file.mimetype,
+        contentType: type.contentType,
       });
 
-      return res.json({
-        ok: true,
-        url: blob.url,
-      });
+      return res.json({ ok: true, url: blob.url });
     }
 
-    // In production without token, fail fast rather than writing to ephemeral serverless filesystem
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(500).json({
-        message: 'Storage configuration error: BLOB_READ_WRITE_TOKEN is missing in production.',
-      });
+    // Serverless filesystems are ephemeral, so production must use blob storage.
+    if (isProduction()) {
+      return res.status(500).json({ message: 'File storage is not configured.' });
     }
 
-    // Local development fallback only
+    // Local development fallback only.
     const uploadsDir = path.join(__dirname, '../../uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    const localFilename = `${timestamp}-${randomSuffix}${extension}`;
-    fs.writeFileSync(path.join(uploadsDir, localFilename), req.file.buffer);
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    fs.writeFileSync(path.join(uploadsDir, objectName), req.file.buffer);
 
     const host = req.get('host') || 'localhost:5000';
-    const protocol = req.protocol || 'http';
-    const url = `${protocol}://${host}/uploads/${localFilename}`;
-
-    return res.json({
-      ok: true,
-      url,
-    });
+    return res.json({ ok: true, url: `${req.protocol}://${host}/uploads/${objectName}` });
   } catch (error) {
     return next(error);
   }

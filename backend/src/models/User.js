@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 80,
     },
     email: {
       type: String,
@@ -13,10 +14,25 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      maxlength: 254,
     },
     passwordHash: {
       type: String,
       required: true,
+      select: false,
+    },
+    // Incrementing this value invalidates every token issued before it.
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+      default: null,
     },
   },
   {

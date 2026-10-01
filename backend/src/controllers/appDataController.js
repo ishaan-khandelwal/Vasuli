@@ -1,5 +1,9 @@
 const AppData = require('../models/AppData');
 const { createDefaultAppData, createDefaultProfile } = require('../utils/defaults');
+const { isPlainObject, sanitizeProfile, sanitizeRecordList } = require('../utils/sanitize');
+
+const MAX_GROUPS = 200;
+const MAX_PERSONAL_LOANS = 1000;
 
 const ensureAppDataForUser = async (user) => {
   let appData = await AppData.findOne({ user: user._id });
@@ -31,11 +35,7 @@ const getAppData = async (req, res, next) => {
 
 const updateGroups = async (req, res, next) => {
   try {
-    const { groups } = req.body;
-
-    if (!Array.isArray(groups)) {
-      return res.status(400).json({ message: 'groups must be an array.' });
-    }
+    const groups = sanitizeRecordList(req.body?.groups, 'groups', MAX_GROUPS);
 
     const appData = await ensureAppDataForUser(req.user);
     appData.groups = groups;
@@ -49,11 +49,7 @@ const updateGroups = async (req, res, next) => {
 
 const updatePersonalLoans = async (req, res, next) => {
   try {
-    const { personalLoans } = req.body;
-
-    if (!Array.isArray(personalLoans)) {
-      return res.status(400).json({ message: 'personalLoans must be an array.' });
-    }
+    const personalLoans = sanitizeRecordList(req.body?.personalLoans, 'personalLoans', MAX_PERSONAL_LOANS);
 
     const appData = await ensureAppDataForUser(req.user);
     appData.personalLoans = personalLoans;
@@ -67,17 +63,14 @@ const updatePersonalLoans = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const profile = req.body.profile;
+    const profile = req.body?.profile;
 
-    if (!profile || Array.isArray(profile) || typeof profile !== 'object') {
+    if (!isPlainObject(profile)) {
       return res.status(400).json({ message: 'profile must be an object.' });
     }
 
     const appData = await ensureAppDataForUser(req.user);
-    appData.profile = {
-      ...createDefaultProfile(req.user.name),
-      ...profile,
-    };
+    appData.profile = sanitizeProfile(profile, createDefaultProfile(req.user.name));
     await appData.save();
 
     return res.json({ profile: appData.profile });

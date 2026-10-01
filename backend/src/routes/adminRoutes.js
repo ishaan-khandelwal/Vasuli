@@ -1,18 +1,16 @@
 const express = require('express');
 const { getAllUsers, getUserDetail } = require('../controllers/adminController');
+const { adminAuthMiddleware } = require('../middleware/adminAuth');
 
 const router = express.Router();
 
-/**
- * Route to get a list of all users
- * GET /api/admin/users
- */
+// Every admin route requires the ADMIN_API_KEY header (disabled entirely when unset).
+router.use(adminAuthMiddleware);
+
+/** GET /api/admin/users?limit=50&page=1 */
 router.get('/users', getAllUsers);
 
-/**
- * Route to get specific user and their app data
- * GET /api/admin/users/:userId
- */
+/** GET /api/admin/users/:userId */
 router.get('/users/:userId', getUserDetail);
 
 module.exports = router;

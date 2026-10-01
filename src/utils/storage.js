@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import defaultMessage from '../constants/defaultMessage';
 import { mergeSettlementsWithSuggestions } from './calculations';
 import { normalizePhoneInput } from './formatters';
@@ -82,6 +84,7 @@ export const defaultProfile = {
   autoReminderTime: '09:00',
   upiId: '',
   autoDetectSmsEnabled: false,
+  autoSendSmsEnabled: false,
 };
 
 export const defaultAuthSession = {
@@ -90,11 +93,10 @@ export const defaultAuthSession = {
 };
 
 export const bootstrapStorage = async () => {
-  const [groups, profile, personalLoans, session] = await Promise.all([
+  const [groups, profile, personalLoans] = await Promise.all([
     AsyncStorage.getItem(GROUPS_KEY),
     AsyncStorage.getItem(PROFILE_KEY),
     AsyncStorage.getItem(PERSONAL_LOANS_KEY),
-    AsyncStorage.getItem(AUTH_SESSION_KEY),
   ]);
 
   if (!groups) {
@@ -109,9 +111,8 @@ export const bootstrapStorage = async () => {
     await AsyncStorage.setItem(PERSONAL_LOANS_KEY, JSON.stringify([]));
   }
 
-  if (!session) {
-    await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(defaultAuthSession));
-  }
+  // Moves a session token saved by older versions out of plain-text AsyncStorage.
+  await getAuthSession();
 };
 
 export const getGroups = async () => {
@@ -170,13 +171,51 @@ export const clearAuthUser = async () => {
   await AsyncStorage.removeItem(AUTH_USER_KEY);
 };
 
+// The auth token is a credential, so on devices it lives in the OS keystore (Android Keystore /
+// iOS Keychain) rather than in plain-text AsyncStorage. Web has no secure store and keeps AsyncStorage.
+const useSecureSession = Platform.OS !== 'web';
+
+const readSessionRaw = async () => {
+  if (!useSecureSession) {
+    return AsyncStorage.getItem(AUTH_SESSION_KEY);
+  }
+
+  try {
+    const secure = await SecureStore.getItemAsync(AUTH_SESSION_KEY);
+    if (secure) {
+      return secure;
+    }
+
+    const legacy = await AsyncStorage.getItem(AUTH_SESSION_KEY);
+    if (legacy) {
+      await SecureStore.setItemAsync(AUTH_SESSION_KEY, legacy);
+      await AsyncStorage.removeItem(AUTH_SESSION_KEY);
+    }
+    return legacy;
+  } catch (error) {
+    console.warn('Secure session read failed.', error);
+    return null;
+  }
+};
+
 export const getAuthSession = async () => {
-  const raw = await AsyncStorage.getItem(AUTH_SESSION_KEY);
-  return raw ? JSON.parse(raw) : defaultAuthSession;
+  try {
+    const raw = await readSessionRaw();
+    return raw ? JSON.parse(raw) : defaultAuthSession;
+  } catch {
+    return defaultAuthSession;
+  }
 };
 
 export const saveAuthSession = async (session) => {
-  await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  const serialized = JSON.stringify(session);
+
+  if (!useSecureSession) {
+    await AsyncStorage.setItem(AUTH_SESSION_KEY, serialized);
+    return;
+  }
+
+  await SecureStore.setItemAsync(AUTH_SESSION_KEY, serialized);
 };
 
 export const clearAllStorage = async () => {
@@ -187,6 +226,9 @@ export const clearAllStorage = async () => {
     AUTH_USER_KEY,
     AUTH_SESSION_KEY,
   ]);
+  if (useSecureSession) {
+    await SecureStore.deleteItemAsync(AUTH_SESSION_KEY).catch(() => {});
+  }
   await bootstrapStorage();
 };
 

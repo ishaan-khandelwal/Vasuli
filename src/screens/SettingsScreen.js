@@ -27,12 +27,24 @@ import { isValidUpiId } from '../utils/upi';
 import SmsPermissionModal from '../components/SmsPermissionModal';
 import SmsSimulatorModal from '../components/SmsSimulatorModal';
 import { requestSmsPermission } from '../utils/smsReader';
+import {
+  clearAutoSmsLog,
+  getAutoSmsLog,
+  getAutoSmsStatus,
+  isAutoSmsAvailable,
+  openBatterySettings,
+  openExactAlarmSettings,
+  requestSendSmsPermission,
+} from '../utils/autoSms';
 
 export default function SettingsScreen() {
   const { profile, authUser, updateUserProfile, resetApp, signOut } = useApp();
   const { showToast } = useToast();
   const [draft, setDraft] = useState(profile);
   const [confirmState, setConfirmState] = useState(null);
+  const [autoSmsLog, setAutoSmsLog] = useState([]);
+  const [autoSmsStatus, setAutoSmsStatus] = useState(null);
+  const autoSmsAvailable = isAutoSmsAvailable();
   const [showSmsPermissionModal, setShowSmsPermissionModal] = useState(false);
   const [showSmsSimulatorModal, setShowSmsSimulatorModal] = useState(false);
 
@@ -70,6 +82,37 @@ export default function SettingsScreen() {
       autoDetectSmsEnabled: Boolean(draft.autoDetectSmsEnabled),
     });
     showToast(draft.autoRemindersEnabled ? 'Settings saved. Allow notifications if prompted.' : 'Settings saved');
+  };
+
+  const refreshAutoSms = async () => {
+    if (!autoSmsAvailable) {
+      return;
+    }
+    const [log, status] = await Promise.all([getAutoSmsLog(), getAutoSmsStatus()]);
+    setAutoSmsLog(log.slice(0, 5));
+    setAutoSmsStatus(status);
+  };
+
+  useEffect(() => {
+    refreshAutoSms();
+  }, [profile?.autoSendSmsEnabled]);
+
+  const handleToggleAutoSendSms = async (value) => {
+    if (value) {
+      const granted = await requestSendSmsPermission();
+      if (!granted) {
+        showToast('SMS permission is required to send reminders automatically');
+        return;
+      }
+    }
+    setDraft((c) => ({ ...c, autoSendSmsEnabled: value }));
+    await updateUserProfile({ ...draft, autoSendSmsEnabled: value });
+    showToast(value ? 'Automatic SMS reminders enabled' : 'Automatic SMS reminders disabled');
+  };
+
+  const handleClearAutoSmsLog = async () => {
+    await clearAutoSmsLog();
+    refreshAutoSms();
   };
 
   const handleToggleSmsDetection = async (value) => {
@@ -276,6 +319,64 @@ export default function SettingsScreen() {
                 <Feather name="terminal" size={15} color={colors.cyan} />
                 <Text style={styles.simulatorButtonText}>Test SMS Detection (Simulator)</Text>
               </Pressable>
+            </GlassCard>
+
+            <GlassCard style={styles.card} variant="elevated">
+              <View style={styles.switchRow}>
+                <View style={styles.switchCopy}>
+                  <Text style={styles.sectionTitle}>Auto-Send SMS Reminders</Text>
+                  <Text style={styles.helperText}>
+                    {autoSmsAvailable
+                      ? 'At your reminder time, Vasuli texts people who owe you money from this phone. It works without internet, but needs signal and your carrier may charge for SMS. Uses the time and interval above.'
+                      : 'Automatic SMS needs the installed Android app. It is not available on web, iOS or Expo Go.'}
+                  </Text>
+                </View>
+                <Switch
+                  value={Boolean(draft.autoSendSmsEnabled)}
+                  disabled={!autoSmsAvailable}
+                  onValueChange={handleToggleAutoSendSms}
+                  trackColor={{ true: colors.primaryStart, false: colors.white10 }}
+                />
+              </View>
+
+              {autoSmsAvailable && draft.autoSendSmsEnabled ? (
+                <>
+                  {autoSmsStatus?.nextTriggerAt ? (
+                    <Text style={styles.helperText}>
+                      Next run: {new Date(autoSmsStatus.nextTriggerAt).toLocaleString()}
+                    </Text>
+                  ) : null}
+                  {autoSmsStatus && !autoSmsStatus.exactAlarmAllowed ? (
+                    <Pressable onPress={openExactAlarmSettings} style={styles.simulatorButton}>
+                      <Feather name="clock" size={15} color={colors.cyan} />
+                      <Text style={styles.simulatorButtonText}>Allow exact timing</Text>
+                    </Pressable>
+                  ) : null}
+                  {autoSmsStatus && !autoSmsStatus.batteryUnrestricted ? (
+                    <Pressable onPress={openBatterySettings} style={styles.simulatorButton}>
+                      <Feather name="battery-charging" size={15} color={colors.cyan} />
+                      <Text style={styles.simulatorButtonText}>Stop battery optimization for Vasuli</Text>
+                    </Pressable>
+                  ) : null}
+
+                  <Text style={[styles.label, { marginTop: 16 }]}>Recent automatic SMS</Text>
+                  {autoSmsLog.length === 0 ? (
+                    <Text style={styles.helperText}>Nothing sent yet.</Text>
+                  ) : (
+                    autoSmsLog.map((entry) => (
+                      <Text key={entry.id} style={styles.helperText}>
+                        {new Date(entry.ts).toLocaleDateString()} - {entry.label} {entry.phone} - {entry.status}
+                        {entry.detail ? ` (${entry.detail})` : ''}
+                      </Text>
+                    ))
+                  )}
+                  {autoSmsLog.length > 0 ? (
+                    <Pressable onPress={handleClearAutoSmsLog}>
+                      <Text style={styles.helperText}>Clear log</Text>
+                    </Pressable>
+                  ) : null}
+                </>
+              ) : null}
             </GlassCard>
 
             <Pressable onPress={save}>

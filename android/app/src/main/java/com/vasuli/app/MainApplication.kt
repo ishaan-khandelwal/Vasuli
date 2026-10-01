@@ -1,5 +1,6 @@
 package com.vasuli.app
 
+import com.vasuli.app.autosms.AutoSmsPackage
 import android.app.Application
 import android.content.res.Configuration
 
@@ -21,6 +22,7 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
+          add(AutoSmsPackage())
           // Packages that cannot be autolinked yet can be added manually here, for example:
           // add(MyReactNativePackage())
         }

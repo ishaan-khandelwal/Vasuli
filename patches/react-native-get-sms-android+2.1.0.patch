@@ -1,0 +1,56 @@
+diff --git a/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/checksums/checksums.lock b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/checksums/checksums.lock
+new file mode 100644
+index 0000000..1d58c32
+Binary files /dev/null and b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/checksums/checksums.lock differ
+diff --git a/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileChanges/last-build.bin b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileChanges/last-build.bin
+new file mode 100644
+index 0000000..f76dd23
+Binary files /dev/null and b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileChanges/last-build.bin differ
+diff --git a/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileHashes/fileHashes.bin b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileHashes/fileHashes.bin
+new file mode 100644
+index 0000000..05cb3f8
+Binary files /dev/null and b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileHashes/fileHashes.bin differ
+diff --git a/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileHashes/fileHashes.lock b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileHashes/fileHashes.lock
+new file mode 100644
+index 0000000..03faa26
+Binary files /dev/null and b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/fileHashes/fileHashes.lock differ
+diff --git a/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/gc.properties b/node_modules/react-native-get-sms-android/android/.gradle/9.2.0/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native-get-sms-android/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock b/node_modules/react-native-get-sms-android/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+new file mode 100644
+index 0000000..8022afe
+Binary files /dev/null and b/node_modules/react-native-get-sms-android/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock differ
+diff --git a/node_modules/react-native-get-sms-android/android/.gradle/buildOutputCleanup/cache.properties b/node_modules/react-native-get-sms-android/android/.gradle/buildOutputCleanup/cache.properties
+new file mode 100644
+index 0000000..07255c4
+--- /dev/null
++++ b/node_modules/react-native-get-sms-android/android/.gradle/buildOutputCleanup/cache.properties
+@@ -0,0 +1,2 @@
++#Thu Oct 01 14:29:16 IST 2026
++gradle.version=9.2.0
+diff --git a/node_modules/react-native-get-sms-android/android/.gradle/vcs-1/gc.properties b/node_modules/react-native-get-sms-android/android/.gradle/vcs-1/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native-get-sms-android/android/build.gradle b/node_modules/react-native-get-sms-android/android/build.gradle
+index 0de40fc..f56f1ae 100644
+--- a/node_modules/react-native-get-sms-android/android/build.gradle
++++ b/node_modules/react-native-get-sms-android/android/build.gradle
+@@ -2,7 +2,7 @@
+ buildscript {
+     repositories {
+         google()
+-        jcenter()
++        mavenCentral()
+     }
+ 
+     dependencies {
+@@ -36,7 +36,7 @@ repositories {
+         // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+         url "$rootDir/../node_modules/react-native/android"
+     }
+-    jcenter()
++    mavenCentral()
+ }
+ 
+ dependencies {

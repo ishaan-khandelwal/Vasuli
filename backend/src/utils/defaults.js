@@ -9,6 +9,7 @@ const createDefaultProfile = (name = 'You') => ({
   autoReminderTime: '09:00',
   upiId: '',
   autoDetectSmsEnabled: false,
+  autoSendSmsEnabled: false,
 });
 
 

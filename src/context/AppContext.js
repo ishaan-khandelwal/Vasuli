@@ -31,6 +31,7 @@ import {
   syncProfile as syncProfileRequest,
 } from '../services/api';
 import { normalizeReminderSettings, syncAutoReminderNotifications } from '../utils/notifications';
+import { clearAutoSmsLog, syncAutoSmsPlan } from '../utils/autoSms';
 
 const AppContext = createContext(null);
 
@@ -154,7 +155,16 @@ export const AppProvider = ({ children }) => {
     }).catch((error) => {
       console.warn('Failed to sync auto reminder notifications.', error);
     });
-  }, [profile, groups, personalLoans]);
+
+    // Signed-out devices must never keep texting on behalf of the previous account.
+    syncAutoSmsPlan({
+      profile: isAuthenticated ? profile : { ...profile, autoSendSmsEnabled: false },
+      groups,
+      personalLoans,
+    }).catch((error) => {
+      console.warn('Failed to sync automatic SMS reminders.', error);
+    });
+  }, [profile, groups, personalLoans, isAuthenticated]);
 
   const applyAuthResponse = async ({ token, user, appData }) => {
     const session = { isAuthenticated: true, token };
@@ -357,7 +367,7 @@ export const AppProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    await Promise.all([clearAuthUser(), saveAuthSession(defaultAuthSession)]);
+    await Promise.all([clearAuthUser(), saveAuthSession(defaultAuthSession), clearAutoSmsLog().catch(() => {})]);
     setAuthUser(null);
     setAuthToken(null);
     setIsAuthenticated(false);
